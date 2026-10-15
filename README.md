@@ -1,88 +1,77 @@
 # benchmark-skateboard
 
-[![npm](https://img.shields.io/npm/v/benchmark-skateboard)](https://www.npmjs.com/package/benchmark-skateboard) [![downloads](https://img.shields.io/npm/dm/benchmark-skateboard)](https://www.npmjs.com/package/benchmark-skateboard) [![license](https://img.shields.io/npm/l/benchmark-skateboard)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
+[![npm](https://img.shields.io/npm/v/benchmark-skateboard)](https://www.npmjs.com/package/benchmark-skateboard) [![CI](https://github.com/pooriaarab/benchmark-skateboard/actions/workflows/ci.yml/badge.svg)](https://github.com/pooriaarab/benchmark-skateboard/actions/workflows/ci.yml) [![license](https://img.shields.io/npm/l/benchmark-skateboard)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
 
-[AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-skateboard) · [npm](https://www.npmjs.com/package/benchmark-skateboard) · [API](#http-api) · [MCP](#model-context-protocol)
+[AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-skateboard) · [npm](https://www.npmjs.com/package/benchmark-skateboard) · [HTTP API](#http-api) · [MCP](#model-context-protocol)
 
-benchmark-skateboard is an open-source AI model benchmark for reasoning tasks. It measures this behavior: Do models understand the physics of a kickflip?
+Can a model keep a kickflip, a heelflip, and gravity straight at the same time? **benchmark-skateboard** measures signed 3D trick rotations, projectile-motion arithmetic, wheels-down orientation, and whether a trick can finish before landing.
 
 ```bash
-npx benchmark-skateboard run --model offline --provider mock --json
+npx benchmark-skateboard run --provider mock
 ```
 
-```json
-{"model":"mock:1","mean":0.5,"totals":{"tasks":2,"passed":1,"failed":0}}
+A real offline run on the 36 public tasks starts like this:
+
+```text
+# Skateboard Physics
+
+- Model: `mock:1`
+- Score: **58.3%**
+- 95% CI: 41.7%–72.2%
+- Tasks: 36
 ```
 
-The starter data comes from a committed seeded generator. Seed 20261015 reproduces the public tasks.
+The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 12 tricks with Earth, Moon, and Mars flight conditions.
 
 ## Install
 
-benchmark-skateboard requires Node.js 20 or newer.
+Node.js 20 or newer is required.
 
 ```bash
 npm install benchmark-skateboard
 ```
 
-## Run your first benchmark
+## Run a model
 
-The mock provider needs no key or network access.
+The mock provider is deterministic, offline, and needs no key. It deliberately returns good and bad answers so you can inspect both grading paths.
+
+For a real model through OpenRouter:
 
 ```bash
-npx benchmark-skateboard run --model offline --provider mock
+npx benchmark-skateboard run --provider openrouter --model openai/gpt-4o-mini
 ```
 
-A successful run prints two scored rows and a mean of 0.5.
+For another OpenAI-compatible endpoint, set `OPENAI_BASE_URL` and `OPENAI_API_KEY`, then choose `--provider openai --model <id>`. The package never reads keys from repository files.
 
-## How it works
+There is no public leaderboard yet. The sample above is a wiring check, not a model result.
 
-```text
-tasks.jsonl -> model adapter -> deterministic grader -> report
-                         |-> CLI / SDK / MCP / HTTP API
+## Read the score
+
+Each task expects this JSON shape:
+
+```json
+{"rotations":{"long":1,"vertical":0,"cross":0},"airtimeS":0.571,"peakHeightM":0.4,"landsWheelsDown":true,"canFlipFinishInAir":true}
 ```
 
-The runner keeps task order and records score, reason, latency, retries, usage, and cost when available.
+The grader gives 36% to exact signed rotations, 34% to airtime and peak height within 5%, and 30% to exact landing and feasibility booleans. Wrong rotation signs lose credit: a heelflip is not a kickflip. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason, and the report includes a seeded bootstrap 95% confidence interval.
 
-## Why it exists
+See [grading](docs/grading.md) for failure modes and weights and [methodology](docs/methodology.md) for axes, equations, and assumptions.
 
-General model leaderboards do not isolate reasoning behavior. This package keeps the task data, grading rules, and provenance together for inspection.
+## Data and reproducibility
 
-## Compare
+`data/tricks.json` contains the reviewed trick table and its source links. `data/tasks.jsonl` contains 36 public tasks: 12 tricks across three gravity and launch-speed variants. Rebuild them exactly:
 
-Checked on 2026-10-15.
+```bash
+node scripts/gen-tasks.mjs --seed 20261015 --split public
+```
 
-| Property | benchmark-skateboard | General chat leaderboard | Ad hoc prompt test |
-| --- | --- | --- | --- |
-| Target | Do models understand the physics of a kickflip? | Broad model quality | One local example |
-| Grading | Deterministic code | Varies | Manual |
-| Offline run | Mock provider | Varies | Varies |
-| Provenance | Package record | Varies | Usually absent |
+Generate a private candidate split with a different seed:
 
-## Coverage
+```bash
+node scripts/gen-tasks.mjs --seed 43110 --split hidden
+```
 
-| Surface | Status |
-| --- | --- |
-| single tasks | Included |
-| SDK | Included |
-| CLI | Included |
-| MCP server | Included |
-| HTTP API | Included |
-
-The E2E gate checks every listed surface against the package source.
-
-## Common use cases
-
-1. **Model developers:** compare adapters with the same seeded tasks.
-2. **Agent developers:** inspect task-level failures before changing prompts.
-3. **Release teams:** run the mock gate before publishing a data update.
-4. **Researchers:** export per-task scores for a reproducible analysis.
-
-## Features
-
-- **Deterministic grading:** Each row includes a score and reason.
-- **Reproducible data:** A committed seeded script creates the public tasks.
-- **Share cards:** The `card` command writes a 1200×630 SVG.
-- **Provenance:** Code and Markdown carry the same source record.
+The hidden file is gitignored; keep it outside public reports and packages. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
@@ -90,78 +79,61 @@ The E2E gate checks every listed surface against the package source.
 import { benchmark, run, score } from "benchmark-skateboard";
 ```
 
-`run(adapter, options)` creates a report. `score(taskId, submission)` grades one trace.
+`run(adapter, options)` returns a standard `RunReport`. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
 
 ## CLI
 
-Commands are `list`, `show`, `run`, `score`, `card`, `provenance`, `index-entry`, `serve`, and `mcp`. Pass `--json` for machine-readable output.
+The command set is `list`, `show <task>`, `run`, `score <results.json>`, `card <report.json>`, `provenance`, `index-entry`, `serve`, and `mcp`. Add `--json` for machine-readable output. `card` writes a 1200×630 SVG with the benchmark name, model, score, and directory URL.
 
 ## Model Context Protocol
 
-Start the MCP stdio server:
+Start the stdio server:
 
 ```bash
 npx benchmark-skateboard mcp
 ```
 
-Tools are `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
+It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
 
 ## HTTP API
 
-Import `handler` from `benchmark-skateboard/api`, or run `npx benchmark-skateboard serve`. Routes are `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `GET /v1/provenance`, and `GET /v1/index-entry`.
+Import `handler` from `benchmark-skateboard/api`, or start a local server with `npx benchmark-skateboard serve`. The fetch-style handler works in Node.js and Cloudflare Workers.
 
-## Data provenance
+| Method | Route |
+| --- | --- |
+| `GET` | `/health` |
+| `GET` | `/v1/tasks` |
+| `GET` | `/v1/tasks/:id` |
+| `POST` | `/v1/score` |
+| `GET` | `/v1/provenance` |
+| `GET` | `/v1/index-entry` |
 
-`data/tasks.jsonl` contains the public tasks. `data/PROVENANCE.md` names the generator, seed, licence, cutoff, and refresh steps. Run `npm run generate:tasks` to rebuild tasks and `npm run provenance` after a build.
+Put authentication and rate limits in front of a public score endpoint.
 
-## Limits
+## Limits and known weaknesses
 
-The starter tasks prove package wiring, not model quality. Replace them before publishing a real benchmark. Public tasks can enter training data. Keep a separately seeded hidden split for final comparisons. Remote providers can add cost and retain prompts under their own policies.
+- The flight model ignores drag, deck inertia, foot contact, body rotation, and unequal landing height.
+- Minimum trick times are declared benchmark assumptions, not measured athlete limits.
+- Trick axes compress motions such as an impossible into one idealized rotation.
+- Public prompts can enter training data. Use a fresh private seed for final comparisons.
+- A 36-task sample has wide confidence intervals and should not support small ranking claims.
+- The grader checks the stated model, not whether a generated animation looks convincing.
 
-## Integration guides
+## Prior art and sources
 
-- [TypeScript SDK integration](#sdk)
-- [Model Context Protocol integration](#model-context-protocol)
-- [HTTP API integration](#http-api)
+The coordinate framing was informed by the physical viewpoint in [Skateboard Tricks and Topological Flips](https://arxiv.org/abs/2108.06307). Trick facts were checked against the pages named in `data/tricks.json`; equations follow OpenStax. Only short factual relationships were retained, in original wording.
 
-## Status
+## Development
 
-Version 0.1.0 is alpha. Task schemas and grading may change before 1.0. Report defects through the GitHub issue tracker. Public case studies are not yet published.
+```bash
+npm ci
+npm run ci:local
+```
 
-## FAQ
+The gate builds the package, rejects trivial answers, runs the mock over every task, calls every CLI and HTTP route, opens the MCP server with the official client, and writes `artifacts/e2e-report.json`.
 
-### What does benchmark-skateboard measure?
-
-benchmark-skateboard measures this behavior: Do models understand the physics of a kickflip? The committed grader defines the exact pass conditions.
-
-### Can benchmark-skateboard run offline?
-
-benchmark-skateboard runs end to end with the mock provider and no key. Real model runs need a configured provider.
-
-### Which providers work?
-
-benchmark-skateboard supports OpenRouter, an OpenAI-compatible base URL, and the offline mock adapter through benchmark-core.
-
-### Does benchmark-skateboard provide a hosted service?
-
-benchmark-skateboard provides a server you run. It does not provide a managed benchmark service.
-
-### Where do the tasks come from?
-
-benchmark-skateboard ships seeded synthetic starter tasks. The provenance file explains how to reproduce and refresh them.
-
-### How are answers graded?
-
-benchmark-skateboard uses exact match for single answers and simulator replay for episode traces. Model judging is off.
-
-### How is this different from a general leaderboard?
-
-benchmark-skateboard measures one named behavior with inspectable tasks and grading. General leaderboards combine broader capabilities.
-
-### Can I use a hidden split?
-
-benchmark-skateboard supports the same schema for public and hidden tasks. Keep hidden data outside the npm package and public repository.
+Version 0.1.0 is alpha. Schemas and task assumptions may change before 1.0. Report defects in [GitHub Issues](https://github.com/pooriaarab/benchmark-skateboard/issues).
 
 ## License
 
-[MIT](LICENSE) © Pooria Arab
+[MIT](LICENSE) © Pooria Arab. The original glossary table is also offered under CC0-1.0 as recorded in `data/tricks.json`.

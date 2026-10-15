@@ -1,19 +1,28 @@
 # benchmark-skateboard
 
-> Do models understand the physics of a kickflip?
+> Deterministic physical-reasoning benchmark for 12 skateboard tricks across Earth, Moon, and Mars conditions.
 
 Package: https://www.npmjs.com/package/benchmark-skateboard
 Repository: https://github.com/pooriaarab/benchmark-skateboard
 Directory: https://private-repo-337e.com/benchmarks/benchmark-skateboard
 
-## Exports
+## Measure
 
-The root exports `benchmark`, `run`, and `score`. `benchmark-skateboard/api` exports the fetch-style `handler`. `benchmark-skateboard/mcp` exports MCP builders.
+The 36 single-answer tasks check signed rotations on three axes, projectile airtime and peak height, wheels-down orientation, and whether a trick fits its declared minimum airtime. Answers are strict JSON. Numeric values have a 5% relative tolerance; rotations and booleans are exact.
 
-## Commands
+## Data
 
-The CLI supports list, show, run, score, card, provenance, index-entry, serve, and mcp. Use the mock provider for offline verification.
+`data/tricks.json` is a human-written CC0 glossary with public reference links. `scripts/gen-tasks.mjs` reproducibly generates the MIT-licensed task grid. Public seed: 20261015. `data/PROVENANCE.md` contains retrieval, contamination, hidden-split, and refresh details.
 
-## Verification
+## Exports and commands
 
-Run `npm run ci:local`. The report is `artifacts/e2e-report.json`.
+The root exports `benchmark`, `run`, and `score`. `benchmark-skateboard/api` exports the fetch-style handler. `benchmark-skateboard/mcp` exports MCP builders.
+
+The CLI supports `list`, `show`, `run`, `score`, `card`, `provenance`, `index-entry`, `serve`, and `mcp`. Run offline with `npx benchmark-skateboard run --provider mock`.
+
+## Documentation
+
+- README.md: quick start and all four surfaces
+- docs/grading.md: weights, checks, and anticipated failures
+- docs/methodology.md: axes, equations, assumptions, and limits
+- artifacts/e2e-report.json: generated verification record

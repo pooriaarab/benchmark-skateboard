@@ -81,6 +81,16 @@ export const benchmark = defineBenchmark({
       refresh: "Review the cited pages yearly or when a factual correction is reported, then record and review any table change.",
     },
     {
+      name: "OpenStax projectile-motion equations",
+      kind: "human-written",
+      url: "https://openstax.org/books/university-physics-volume-1/pages/4-3-projectile-motion",
+      licence: "CC-BY-4.0",
+      howToGet: "Read section 4.3 and docs/methodology.md; only the standard constant-acceleration equations are used.",
+      retrievedAt: "2026-10-15T00:00:00.000Z",
+      contaminationNotes: "This is a public method reference, not copied task text. The generated numeric combinations use the benchmark seed.",
+      refresh: "Recheck the linked section when the method changes; equations are otherwise stable.",
+    },
+    {
       name: "Seeded projectile-motion task generator",
       kind: "synthetic",
       url: "https://github.com/pooriaarab/benchmark-skateboard/blob/main/scripts/gen-tasks.mjs",
