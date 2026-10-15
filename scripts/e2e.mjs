@@ -21,7 +21,7 @@ assert.ok(firstTask);
 const shown = JSON.parse((await cli("show", firstTask.id, "--json")).stdout);
 assert.equal(shown.task.id, firstTask.id);
 
-const runResult = await cli("run", "--model", "offline", "--provider", "mock", "--seed", "7", "--json");
+const runResult = await cli("run", "--provider", "mock", "--seed", "7", "--json");
 const report = JSON.parse(runResult.stdout);
 assert.equal(report.rows.length, 36);
 assert.ok(report.rows.some((row) => row.score === 1));

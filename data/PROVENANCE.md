@@ -12,6 +12,16 @@ This file is generated from the benchmark definition.
 - Contamination notes: The glossary and public tasks are visible after 2026-10-15. Final comparisons should generate a private split with a fresh seed and keep it outside the package.
 - Refresh: Review the cited pages yearly or when a factual correction is reported, then record and review any table change.
 
+## OpenStax projectile-motion equations
+
+- Kind: `human-written`
+- URL: https://openstax.org/books/university-physics-volume-1/pages/4-3-projectile-motion
+- Licence: `CC-BY-4.0`
+- Retrieved: 2026-10-15T00:00:00.000Z
+- How to get it: Read section 4.3 and docs/methodology.md; only the standard constant-acceleration equations are used.
+- Contamination notes: This is a public method reference, not copied task text. The generated numeric combinations use the benchmark seed.
+- Refresh: Recheck the linked section when the method changes; equations are otherwise stable.
+
 ## Seeded projectile-motion task generator
 
 - Kind: `synthetic`
