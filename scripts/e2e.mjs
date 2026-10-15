@@ -21,9 +21,12 @@ assert.ok(firstTask);
 const shown = JSON.parse((await cli("show", firstTask.id, "--json")).stdout);
 assert.equal(shown.task.id, firstTask.id);
 
-const runResult = await cli("run", "--provider", "mock", "--seed", "7", "--json");
+const runResult = await cli("run", "--provider", "mock", "--json");
 const report = JSON.parse(runResult.stdout);
 assert.equal(report.rows.length, 36);
+assert.equal(report.mean, 21 / 36);
+assert.equal(report.confidenceInterval95.low, 15 / 36);
+assert.equal(report.confidenceInterval95.high, 26 / 36);
 assert.ok(report.rows.some((row) => row.score === 1));
 assert.ok(report.rows.some((row) => row.score === 0));
 await mkdir("artifacts", { recursive: true });
