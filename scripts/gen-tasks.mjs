@@ -6,11 +6,17 @@ const valueAfter = (flag, fallback) => {
   const index = process.argv.indexOf(flag);
   return index < 0 ? fallback : process.argv[index + 1];
 };
-const seed = Number(valueAfter("--seed", "20261015"));
+const PUBLIC_SEED = 20261015;
+const seedFlagIndex = process.argv.indexOf("--seed");
+const seed = Number(valueAfter("--seed", String(PUBLIC_SEED)));
 const split = valueAfter("--split", "public");
 const outputFlag = valueAfter("--output", "");
 if (!Number.isInteger(seed) || !["public", "hidden"].includes(split)) {
   throw new Error("Usage: gen-tasks.mjs [--seed INTEGER] [--split public|hidden] [--output PATH]");
+}
+if (split === "hidden") {
+  if (seedFlagIndex < 0) throw new Error("--split hidden requires an explicit --seed.");
+  if (seed === PUBLIC_SEED) throw new Error("--split hidden must not reuse the public seed 20261015.");
 }
 const glossary = JSON.parse(await readFile(new URL("../data/tricks.json", import.meta.url), "utf8"));
 const worlds = [
@@ -82,11 +88,12 @@ const tasks = ordered.map(({ trick, world }) => {
     }
     if (gap(launchSpeed) <= 0.1) launchSpeed = best;
   }
-  const airtimeS = round((2 * launchSpeed) / world.gravity);
+  const airtimeExact = (2 * launchSpeed) / world.gravity;
+  const airtimeS = round(airtimeExact);
   const peakHeightM = round((launchSpeed ** 2) / (2 * world.gravity));
   const rotations = trick.rotations;
   const landsWheelsDown = Number.isInteger(rotations.long) && Number.isInteger(rotations.cross);
-  const canFlipFinishInAir = airtimeS + 1e-9 >= trick.minimumAirtimeS;
+  const canFlipFinishInAir = airtimeExact + 1e-9 >= trick.minimumAirtimeS;
   const answer = { rotations, airtimeS, peakHeightM, landsWheelsDown, canFlipFinishInAir };
   const article = /^[aeiou]/i.test(trick.name) && !/^one-/i.test(trick.name) ? "an" : "a";
   const place =

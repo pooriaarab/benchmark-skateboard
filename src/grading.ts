@@ -114,12 +114,31 @@ export function parseAnswer(value: unknown): Answer | undefined {
   return parsed as Answer;
 }
 
+// Prompts ask for three-decimal values, so the tolerance is 5% relative or half a
+// thousandth, whichever is larger; the floor keeps a correctly rounded answer inside.
 const close = (actual: number, expected: number) =>
-  Math.abs(actual - expected) <= Math.abs(expected) * 0.05 + 1e-9;
+  Math.abs(actual - expected) <= Math.max(Math.abs(expected) * 0.05, 5e-4) + 1e-9;
 
 function minimumAirtime(task: Task): number | undefined {
   const value = task.metadata?.minimumAirtimeS;
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+// Grade against the unrounded physics values, not the stored three-decimal answer.
+function referencePhysics(task: Task, expected: Answer): { airtimeS: number; peakHeightM: number } {
+  const gravity = task.metadata?.gravity;
+  const launchSpeed = task.metadata?.launchSpeed;
+  if (
+    typeof gravity === "number" &&
+    Number.isFinite(gravity) &&
+    gravity > 0 &&
+    typeof launchSpeed === "number" &&
+    Number.isFinite(launchSpeed) &&
+    launchSpeed >= 0
+  ) {
+    return { airtimeS: (2 * launchSpeed) / gravity, peakHeightM: launchSpeed ** 2 / (2 * gravity) };
+  }
+  return { airtimeS: expected.airtimeS, peakHeightM: expected.peakHeightM };
 }
 
 const WEIGHTS = {
@@ -140,17 +159,19 @@ function fieldChecks(
   expected: Answer,
 ): Array<[keyof typeof WEIGHTS, number, boolean]> {
   const minimum = minimumAirtime(task);
+  const reference = referencePhysics(task, expected);
   const rotationsMatch =
     answer.rotations.long === expected.rotations.long &&
     answer.rotations.vertical === expected.rotations.vertical &&
     answer.rotations.cross === expected.rotations.cross;
-  const physicsOk =
-    close(answer.airtimeS, expected.airtimeS) && close(answer.peakHeightM, expected.peakHeightM);
-  const expectedFlip = minimum !== undefined && expected.airtimeS + 1e-9 >= minimum;
+  const airtimeOk = close(answer.airtimeS, reference.airtimeS);
+  const peakOk = close(answer.peakHeightM, reference.peakHeightM);
+  const physicsOk = airtimeOk && peakOk;
+  const expectedFlip = minimum !== undefined && reference.airtimeS + 1e-9 >= minimum;
   return [
     ["rotations", WEIGHTS.rotations, rotationsMatch],
-    ["airtimeS", WEIGHTS.airtimeS, close(answer.airtimeS, expected.airtimeS)],
-    ["peakHeightM", WEIGHTS.peakHeightM, close(answer.peakHeightM, expected.peakHeightM)],
+    ["airtimeS", WEIGHTS.airtimeS, airtimeOk],
+    ["peakHeightM", WEIGHTS.peakHeightM, peakOk],
     ["landsWheelsDown", WEIGHTS.landsWheelsDown, physicsOk && answer.landsWheelsDown === expectedLands(expected)],
     [
       "canFlipFinishInAir",

@@ -12,7 +12,7 @@ Version 0.2.0. The 72 single-answer tasks check signed rotations on three axes, 
 
 ## Data
 
-`data/tricks.json` is a human-written CC0 glossary with public reference links. `scripts/gen-tasks.mjs` reproducibly generates the MIT-licensed task grid. Public seed: 20261015. `data/PROVENANCE.md` contains retrieval, contamination, hidden-split, and refresh details.
+`data/tricks.json` is a human-written CC0 glossary with public reference links. `scripts/gen-tasks.mjs` reproducibly generates the MIT-licensed task grid. Public seed: 20261015. A hidden split requires an explicit `--seed` and refuses the public seed. `data/PROVENANCE.md` contains retrieval, contamination, hidden-split, and refresh details.
 
 ## Exports and commands
 

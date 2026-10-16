@@ -3,7 +3,7 @@ import { gradeSkateboard } from "./grading.js";
 import { loadTasksFile } from "./tasks.js";
 
 export { gradeSkateboard, parseAnswer } from "./grading.js";
-export { loadTasks, loadTasksFile, setTasksPath, getTasksPath, resolvePackagedTasksPath, resolvePublicTasksPath } from "./tasks.js";
+export { loadTasksFile, resolvePackagedTasksPath, resolvePublicTasksPath } from "./tasks.js";
 
 const definition: BenchmarkDefinition = {
   id: "benchmark-skateboard",
