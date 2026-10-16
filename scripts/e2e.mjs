@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer as createNetServer } from "node:net";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { unlinkSync } from "node:fs";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -12,6 +13,12 @@ const cli = (...args) => execFile(process.execPath, ["dist/cli.js", ...args], { 
 
 const hiddenSeed = 88200416;
 const hiddenPath = ".hidden/tasks.jsonl";
+// The hidden split is gitignored; remove it even if an assertion fails mid-run.
+process.on("exit", () => {
+  try {
+    unlinkSync(hiddenPath);
+  } catch {}
+});
 const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
 const round3 = (value) => Math.round(value * 1000) / 1000;
 
@@ -159,6 +166,8 @@ for (const task of [...tasks, ...hiddenTasks]) {
 }
 assert.ok(Math.max(...probe.wrongFormula) < 0.3, `wrong-formula max ${Math.max(...probe.wrongFormula)}`);
 assert.ok(Math.max(...probe.tableOnly) < 0.3, `table-lookup max ${Math.max(...probe.tableOnly)}`);
+// airtime 99 earns rotations and peak credit but must not earn gated landing credit.
+assert.ok(Math.max(...probe.airtime99) < 0.5, `airtime-99 max ${Math.max(...probe.airtime99)}`);
 
 // A run with a tasks path must not reuse the task list of an earlier run.
 const runIds = (rows) => [...new Set(rows.map((row) => row.taskId.split("-")[0]))];
@@ -256,16 +265,26 @@ try {
   assert.equal((await score.json()).score, 1);
   assert.equal((await get("/v1/provenance")).response.status, 200);
   assert.equal((await get("/v1/index-entry")).value.task_count, taskCount);
-  const hiddenListed = await get(`/v1/tasks?tasks=${encodeURIComponent(hiddenPath)}`);
-  assert.ok(hiddenListed.value.tasks.every((task) => task.id.startsWith("hidden-")));
+  const publicListed = await get(`/v1/tasks?tasks=${encodeURIComponent("data/tasks.jsonl")}`);
+  assert.equal(publicListed.value.tasks.length, taskCount);
+  const publicScore = await fetch(`${base}/v1/score?tasks=${encodeURIComponent("data/tasks.jsonl")}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ taskId: firstTask.id, submission: { answer: firstTask.expected } }),
+  });
+  routes["POST /v1/score?tasks=public"] = publicScore.status;
+  assert.equal(publicScore.status, 200);
+  assert.equal((await publicScore.json()).score, 1);
+  // Remote surfaces serve only public data/ splits; hidden files stay on local surfaces.
+  assert.equal((await get(`/v1/tasks?tasks=${encodeURIComponent(hiddenPath)}`)).response.status, 400);
   const hiddenScore = await fetch(`${base}/v1/score?tasks=${encodeURIComponent(hiddenPath)}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ taskId: hiddenTasks[0].id, submission: { answer: hiddenTasks[0].expected } }),
   });
   routes["POST /v1/score?tasks=hidden"] = hiddenScore.status;
-  assert.equal(hiddenScore.status, 200);
-  assert.equal((await hiddenScore.json()).score, 1);
+  assert.equal(hiddenScore.status, 400);
+  assert.equal((await get(`/v1/tasks?tasks=${encodeURIComponent("data/tricks.json")}`)).response.status, 400);
   assert.equal((await get("/v1/tasks?tasks=../../etc/passwd")).response.status, 400);
 } finally {
   if (server.exitCode === null) {
@@ -323,29 +342,29 @@ try {
     ["get_task", { taskId: firstTask.id }],
     ["score_answer", { taskId: firstTask.id, submission: { answer: firstTask.expected } }],
     ["get_provenance", {}],
+    ["list_tasks", { tasksPath: "data/tasks.jsonl" }],
     ["list_tasks", { tasksPath: hiddenPath }],
     ["run_benchmark", { model: "offline" }],
+    ["run_benchmark", { model: "offline", provider: "mock", tasksPath: hiddenPath }],
   ];
   for (const [name, args] of calls) {
     const result = await client.callTool({ name, arguments: args });
-    if (name === "run_benchmark") assert.equal(result.isError, true);
+    if (name === "run_benchmark" || args.tasksPath === hiddenPath) assert.equal(result.isError, true);
     else if (name === "list_tasks" && args.tasksPath)
-      assert.ok(JSON.parse(result.content[0].text).tasks.every((task) => task.id.startsWith("hidden-")));
+      assert.equal(JSON.parse(result.content[0].text).tasks.length, taskCount);
     else assert.notEqual(result.isError, true);
   }
   const mcpRun = await client.callTool({
     name: "run_benchmark",
-    arguments: { model: "offline", provider: "mock", tasksPath: hiddenPath },
+    arguments: { model: "offline", provider: "mock", tasksPath: "data/tasks.jsonl" },
   });
   assert.notEqual(mcpRun.isError, true);
   const mcpReport = JSON.parse(mcpRun.content[0].text);
   assert.ok(mcpReport.breakdown && typeof mcpReport.breakdown.rotations === "number");
-  assert.ok(mcpReport.rows.every((row) => row.taskId.startsWith("hidden-")));
+  assert.equal(mcpReport.rows.length, taskCount);
 } finally {
   await client.close();
 }
-
-await unlink(hiddenPath);
 
 const artifact = {
   task_count: report.rows.length,

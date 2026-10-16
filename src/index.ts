@@ -9,7 +9,7 @@ import { withSkateboardBreakdown, type SkateboardRunReport } from "./report.js";
 
 export { benchmark, createBenchmark };
 export type { SkateboardRunReport } from "./report.js";
-export { setTasksPath, getTasksPath, loadTasksFile, withTasksPath, resolvePackagedTasksPath } from "./tasks.js";
+export { setTasksPath, getTasksPath, loadTasksFile, withTasksPath, resolvePackagedTasksPath, resolvePublicTasksPath } from "./tasks.js";
 export { parseAnswer, gradeSkateboard } from "./grading.js";
 
 export type SkateboardRunOptions = RunOptions & { tasks?: string };
