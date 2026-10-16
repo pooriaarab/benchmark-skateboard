@@ -12,22 +12,23 @@ import {
 } from "benchmark-core";
 import { benchmark } from "./benchmark.js";
 import { formatBreakdownLine, withSkateboardBreakdown } from "./report.js";
-import { setTasksPath } from "./tasks.js";
+import { withTasksPath } from "./tasks.js";
 
-function extractTasksFlag(argv: string[]): string[] {
+function extractTasksFlag(argv: string[]): { args: string[]; tasksPath?: string } {
   const next: string[] = [];
+  let tasksPath: string | undefined;
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--tasks") {
       const path = argv[index + 1];
       if (typeof path !== "string" || path.length === 0) throw new Error("--tasks needs a path.");
-      setTasksPath(path);
+      tasksPath = path;
       index += 1;
       continue;
     }
     const item = argv[index];
     if (item !== undefined) next.push(item);
   }
-  return next;
+  return tasksPath === undefined ? { args: next } : { args: next, tasksPath };
 }
 
 function adapter(provider: string, model: string, seed: number) {
@@ -115,19 +116,17 @@ async function scoreCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
-const args = extractTasksFlag(process.argv.slice(2));
+const { args, tasksPath } = extractTasksFlag(process.argv.slice(2));
 if (args[0] === "run" && args.includes("--provider") && args[args.indexOf("--provider") + 1] === "mock" && !args.includes("--model")) {
   args.push("--model", "offline");
 }
 
 try {
-  if (args[0] === "run") {
-    process.exitCode = await runCommand(args.slice(1));
-  } else if (args[0] === "score") {
-    process.exitCode = await scoreCommand(args.slice(1));
-  } else {
-    process.exitCode = await core.main(args);
-  }
+  process.exitCode = await withTasksPath(tasksPath, async () => {
+    if (args[0] === "run") return runCommand(args.slice(1));
+    if (args[0] === "score") return scoreCommand(args.slice(1));
+    return core.main(args);
+  });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
