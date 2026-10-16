@@ -13,7 +13,7 @@ export const benchmark = defineBenchmark({
   category: "physical-reasoning",
   whatItMeasures:
     "Signed 3D rotation understanding, projectile-motion arithmetic, landing orientation, and whether a skateboard trick fits its airtime.",
-  version: "0.1.0",
+  version: "0.2.0",
   status: "alpha",
   loadTasks,
   grade: gradeSkateboard,
