@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { createHandler, type Benchmark, type Task } from "benchmark-core";
 import { benchmark, createBenchmark } from "./benchmark.js";
 import { resolvePackagedTasksPath } from "./tasks.js";
@@ -23,7 +24,7 @@ export function createSkateboardHandler(base: Benchmark<Task> = benchmark as Ben
     let handler = byPath.get(resolved);
     if (!handler) {
       handler = createHandler(createBenchmark(resolved) as Benchmark<Task>);
-      byPath.set(resolved, handler);
+      if (existsSync(resolved)) byPath.set(resolved, handler);
     }
     return handler(request);
   };
