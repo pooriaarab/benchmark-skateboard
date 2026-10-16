@@ -73,7 +73,7 @@ Generate a private candidate split with a different seed:
 node scripts/gen-tasks.mjs --seed 88200416 --split hidden
 ```
 
-The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` in the SDK, `?tasks=<path>` on each HTTP route, a `tasksPath` argument on MCP tools, or `BENCHMARK_SKATEBOARD_TASKS` for the HTTP API and MCP server defaults. Remote surfaces only accept paths inside the package. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
+The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` in the SDK, `?tasks=<path>` on each HTTP route, a `tasksPath` argument on MCP tools, or `BENCHMARK_SKATEBOARD_TASKS` for the HTTP API and MCP server defaults. Remote surfaces (`?tasks=` and `tasksPath`) only accept `*.jsonl` files under `data/`, so a hidden split stays reachable only through the CLI flag and the SDK option. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
@@ -95,7 +95,7 @@ Start the stdio server:
 npx benchmark-skateboard mcp
 ```
 
-It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`. `run_benchmark` accepts `provider` (`openrouter`, `openai`, or `mock`) and returns the report with the rotations/physics/landing breakdown. Every task-reading tool accepts an optional `tasksPath` inside the package.
+It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`. `run_benchmark` accepts `provider` (`openrouter`, `openai`, or `mock`) and returns the report with the rotations/physics/landing breakdown. Every task-reading tool accepts an optional `tasksPath` naming a `*.jsonl` split file under `data/`.
 
 ## HTTP API
 
@@ -110,7 +110,7 @@ Import `handler` from `benchmark-skateboard/api`, or start a local server with `
 | `GET` | `/v1/provenance` |
 | `GET` | `/v1/index-entry` |
 
-Add `?tasks=<path>` to any route to read a split file inside the package instead of the default tasks.
+Add `?tasks=<path>` to any route to read a public split file under `data/` instead of the default tasks.
 
 Put authentication and rate limits in front of a public score endpoint.
 

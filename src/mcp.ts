@@ -14,11 +14,11 @@ import {
 } from "benchmark-core";
 import { benchmark, createBenchmark } from "./benchmark.js";
 import { withSkateboardBreakdown } from "./report.js";
-import { resolvePackagedTasksPath } from "./tasks.js";
+import { resolvePublicTasksPath } from "./tasks.js";
 
 const tasksPathProperty = {
   type: "string",
-  description: "Optional tasks JSONL path; must resolve inside the benchmark-skateboard package.",
+  description: "Optional tasks JSONL path; must name a public split file under data/ in the package.",
 };
 
 const tools = [
@@ -88,8 +88,8 @@ function pickBenchmark(
 ): { instance: Benchmark<Task> } | { error: string } {
   if (input.tasksPath === undefined) return { instance: base };
   if (typeof input.tasksPath !== "string") return { error: "tasksPath must be a string." };
-  const resolved = resolvePackagedTasksPath(input.tasksPath);
-  if (resolved === undefined) return { error: "tasksPath must resolve inside the package." };
+  const resolved = resolvePublicTasksPath(input.tasksPath);
+  if (resolved === undefined) return { error: "tasksPath must name a *.jsonl split file under data/." };
   return { instance: createBenchmark(resolved) as Benchmark<Task> };
 }
 
