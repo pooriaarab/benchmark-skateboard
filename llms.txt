@@ -8,7 +8,7 @@ Directory: https://aibenchmarkindex.com/benchmarks/benchmark-skateboard
 
 ## Measure
 
-The 36 single-answer tasks check signed rotations on three axes, projectile airtime and peak height, wheels-down orientation, and whether a trick fits its declared minimum airtime. Answers are strict JSON. Numeric values have a 5% relative tolerance; rotations and booleans are exact.
+Version 0.2.0. The 36 single-answer tasks check signed rotations on three axes, projectile airtime and peak height, wheels-down orientation, and whether a trick fits its declared minimum airtime. Answers are JSON (one optional Markdown fence or preamble). Numeric values have a 5% relative tolerance; rotations must match together before landing booleans count.
 
 ## Data
 
