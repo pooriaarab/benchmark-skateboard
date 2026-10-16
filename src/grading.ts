@@ -15,6 +15,7 @@ const hasOnly = (value: Record<string, unknown>, keys: string[]) =>
 
 /** Strip one surrounding markdown fence and parse the last JSON object in the text. */
 export function extractAnswerJson(text: string): unknown | undefined {
+  if (text.length > 20_000) return undefined;
   let trimmed = text.trim();
   const fullFence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
   if (fullFence?.[1]) trimmed = fullFence[1].trim();

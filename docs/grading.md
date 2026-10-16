@@ -4,6 +4,7 @@ The grader reads model text, strips one surrounding Markdown code fence when pre
 
 ## Ways this grader can fail
 
+- Answers longer than 20,000 characters score zero (bounds the JSON scan).
 - Malformed JSON, extra fields, missing fields, or non-finite numbers score zero.
 - A one-line preamble or a single ```json fence around the answer is accepted; multiple objects use the last parseable object.
 - Rotation credit is all-or-nothing: all three signed turn values must match; a heelflip is not a kickflip.
