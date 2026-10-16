@@ -141,3 +141,18 @@ Version 0.2.0 is alpha. Schemas and task assumptions may change before 1.0. Repo
 ## License
 
 [MIT](LICENSE) © Pooria Arab. The original glossary table is also offered under CC0-1.0 as recorded in `data/tricks.json`.
+
+## Cite
+
+Please cite this package with its Zenodo DOI. The DOI below names all versions. GitHub also shows a "Cite this repository" box from `CITATION.cff`.
+
+```bibtex
+@software{arab2026benchmarkskateboard,
+  author  = {Arab, Pooria},
+  title   = {benchmark-skateboard},
+  year    = {2026},
+  version = {0.2.0},
+  doi     = {10.5281/zenodo.23422365},
+  url     = {https://aibenchmarkindex.com/benchmarks/benchmark-skateboard}
+}
+```
