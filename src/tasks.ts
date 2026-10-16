@@ -31,3 +31,17 @@ export function loadTasks(): Promise<Task[]> {
   cached ??= loadTasksFile();
   return cached;
 }
+
+export async function withTasksPath<T>(path: string | undefined, fn: () => Promise<T>): Promise<T> {
+  const previous = tasksPath;
+  if (path !== undefined) {
+    tasksPath = path;
+    cached = undefined;
+  }
+  try {
+    return await fn();
+  } finally {
+    tasksPath = previous;
+    cached = undefined;
+  }
+}
