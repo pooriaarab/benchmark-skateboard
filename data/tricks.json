@@ -12,7 +12,7 @@
     { "id": "kickflip", "name": "Kickflip", "description": "The board makes one kickflip-direction roll along its length.", "rotations": { "long": 1, "vertical": 0, "cross": 0 }, "minimumAirtimeS": 0.48 },
     { "id": "heelflip", "name": "Heelflip", "description": "The board makes one roll opposite to a kickflip.", "rotations": { "long": -1, "vertical": 0, "cross": 0 }, "minimumAirtimeS": 0.48 },
     { "id": "pop-shove-it", "name": "Pop shove-it", "description": "The board makes a backside half-turn around the vertical axis.", "rotations": { "long": 0, "vertical": -0.5, "cross": 0 }, "minimumAirtimeS": 0.28 },
-    { "id": "frontside-180", "name": "Frontside 180", "description": "The board makes a frontside half-turn around the vertical axis.", "rotations": { "long": 0, "vertical": 0.5, "cross": 0 }, "minimumAirtimeS": 0.28 },
+    { "id": "frontside-180", "name": "Frontside 180", "description": "The board makes a frontside half-turn around the vertical axis (board rotation only; rider body rotation is not scored).", "rotations": { "long": 0, "vertical": 0.5, "cross": 0 }, "minimumAirtimeS": 0.28 },
     { "id": "varial-kickflip", "name": "Varial kickflip", "description": "A kickflip is combined with a backside half shove-it.", "rotations": { "long": 1, "vertical": -0.5, "cross": 0 }, "minimumAirtimeS": 0.48 },
     { "id": "360-flip", "name": "360 flip", "description": "A kickflip is combined with one backside vertical-axis turn.", "rotations": { "long": 1, "vertical": -1, "cross": 0 }, "minimumAirtimeS": 0.48 },
     { "id": "hardflip", "name": "Hardflip", "description": "A kickflip is combined with a frontside half shove-it.", "rotations": { "long": 1, "vertical": 0.5, "cross": 0 }, "minimumAirtimeS": 0.48 },
