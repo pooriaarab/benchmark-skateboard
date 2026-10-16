@@ -23,6 +23,15 @@ const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.
 const round3 = (value) => Math.round(value * 1000) / 1000;
 
 await execFile("npm", ["run", "build"]);
+// Hidden splits demand an explicit, non-public seed.
+await assert.rejects(
+  execFile(process.execPath, ["scripts/gen-tasks.mjs", "--split", "hidden"]),
+  /requires an explicit --seed/,
+);
+await assert.rejects(
+  execFile(process.execPath, ["scripts/gen-tasks.mjs", "--seed", "20261015", "--split", "hidden"]),
+  /must not reuse the public seed/,
+);
 await execFile(process.execPath, ["scripts/gen-tasks.mjs", "--seed", String(hiddenSeed), "--split", "hidden"]);
 const hiddenTasks = (await readFile(hiddenPath, "utf8"))
   .trim()
@@ -61,7 +70,14 @@ const indexEntry = JSON.parse((await cli("index-entry", "--json")).stdout);
 assert.equal(indexEntry.task_count, taskCount);
 assert.equal(indexEntry.status, "alpha");
 
-const { benchmark, run } = await import("../dist/index.js");
+const sdk = await import("../dist/index.js");
+const { benchmark, createBenchmark, run } = sdk;
+// The package surface must not expose the removed process-global task controls.
+for (const module of [sdk, await import("../dist/api.js"), await import("../dist/mcp.js")]) {
+  for (const name of ["setTasksPath", "getTasksPath", "withTasksPath", "loadTasks"]) {
+    assert.equal(module[name], undefined, `stale export ${name}`);
+  }
+}
 const tasks = await benchmark.listTasks();
 const goodScores = await Promise.all(tasks.map((task) => benchmark.score(task, { answer: task.expected })));
 assert.ok(goodScores.every(({ score }) => score === 1));
@@ -205,6 +221,21 @@ const visibleReport = await run(visiblePolicy, {});
 const solved = visibleReport.rows.filter((row) => row.score === 1).length;
 assert.equal(solved, taskCount);
 
+// The stored reference answer must score 1.0 on every task of every seed.
+const sweepPath = "artifacts/sweep-tasks.jsonl";
+for (let seed = 700001; seed <= 700050; seed += 1) {
+  await execFile(process.execPath, [
+    "scripts/gen-tasks.mjs", "--seed", String(seed), "--split", "hidden", "--output", sweepPath,
+  ]);
+  const instance = createBenchmark(sweepPath);
+  const sweepTasks = await instance.listTasks();
+  const sweepScores = await Promise.all(
+    sweepTasks.map((task) => instance.score(task, { answer: task.expected })),
+  );
+  const misses = sweepScores.filter(({ score }) => score !== 1).length;
+  assert.equal(misses, 0, `seed ${seed} left ${misses} reference answers below 1`);
+}
+
 const publicByTrickWorld = new Map(tasks.map((task) => [`${task.metadata.trick}:${task.metadata.world}`, task]));
 let promptMatches = 0;
 for (const hidden of hiddenTasks) {
@@ -285,6 +316,7 @@ try {
   routes["POST /v1/score?tasks=hidden"] = hiddenScore.status;
   assert.equal(hiddenScore.status, 400);
   assert.equal((await get(`/v1/tasks?tasks=${encodeURIComponent("data/tricks.json")}`)).response.status, 400);
+  assert.equal((await get(`/v1/tasks?tasks=${encodeURIComponent("data/missing.jsonl")}`)).response.status, 400);
   assert.equal((await get("/v1/tasks?tasks=../../etc/passwd")).response.status, 400);
 } finally {
   if (server.exitCode === null) {

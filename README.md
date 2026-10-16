@@ -67,13 +67,13 @@ See [grading](docs/grading.md) for failure modes and weights and [methodology](d
 node scripts/gen-tasks.mjs --seed 20261015 --split public
 ```
 
-Generate a private candidate split with a different seed:
+Generate a private candidate split with a different seed. The hidden split requires an explicit `--seed` and refuses the public seed 20261015:
 
 ```bash
 node scripts/gen-tasks.mjs --seed 88200416 --split hidden
 ```
 
-The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` in the SDK, `?tasks=<path>` on each HTTP route, a `tasksPath` argument on MCP tools, or `BENCHMARK_SKATEBOARD_TASKS` for the HTTP API and MCP server defaults. Remote surfaces (`?tasks=` and `tasksPath`) only accept `*.jsonl` files under `data/`, so a hidden split stays reachable only through the CLI flag and the SDK option. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
+The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` or `createBenchmark(path)` in the SDK, `?tasks=<path>` on each HTTP route, or a `tasksPath` argument on MCP tools. Remote surfaces (`?tasks=` and `tasksPath`) only accept `*.jsonl` files under `data/`, so a hidden split stays reachable only through the CLI flag and the SDK option. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
@@ -81,7 +81,7 @@ The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from
 import { benchmark, run, score } from "benchmark-skateboard";
 ```
 
-`run(adapter, options)` returns a standard `RunReport` plus the skateboard field `breakdown`; `options.tasks` points it at a split file. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
+`run(adapter, options)` returns a standard `RunReport` plus the skateboard field `breakdown`; `options.tasks` points it at a split file. `createBenchmark(path)` binds a new instance to one tasks file — there is no process-global tasks path. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
 
 ## CLI
 
