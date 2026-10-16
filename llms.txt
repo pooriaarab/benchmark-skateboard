@@ -1,6 +1,6 @@
 # benchmark-skateboard
 
-> Deterministic physical-reasoning benchmark for 12 skateboard tricks across Earth, Moon, and Mars conditions.
+> Deterministic physical-reasoning benchmark for 24 skateboard tricks across Earth, Moon, and Mars conditions.
 
 Package: https://www.npmjs.com/package/benchmark-skateboard
 Repository: https://github.com/pooriaarab/benchmark-skateboard
@@ -8,7 +8,7 @@ Directory: https://aibenchmarkindex.com/benchmarks/benchmark-skateboard
 
 ## Measure
 
-Version 0.2.0. The 36 single-answer tasks check signed rotations on three axes, projectile airtime and peak height, wheels-down orientation, and whether a trick fits its declared minimum airtime. Answers are JSON (one optional Markdown fence or preamble). Numeric values have a 5% relative tolerance; rotations must match together before landing booleans count.
+Version 0.2.0. The 72 single-answer tasks check signed rotations on three axes, projectile airtime and peak height, wheels-down orientation, and whether a trick fits its declared minimum airtime. Answers are JSON (one optional Markdown fence or surrounding prose). Numeric values have a 5% relative tolerance; landing booleans count only when airtime and peak are both within tolerance.
 
 ## Data
 

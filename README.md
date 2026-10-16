@@ -10,20 +10,20 @@ Can a model keep a kickflip, a heelflip, and gravity straight at the same time? 
 npx benchmark-skateboard run --provider mock
 ```
 
-A real offline run on the 36 public tasks starts like this:
+A real offline run on the 72 public tasks starts like this:
 
 ```text
 # Skateboard Physics
 
 - Model: `mock:1`
-- Score: **58.3%**
-- 95% CI: 41.7%–72.2%
-- Tasks: 36
+- Score: **54.2%**
+- 95% CI: 41.7%–65.3%
+- Tasks: 72
 
-Breakdown — rotations: 21.0%, physics: 19.8%, landing: 17.5%
+Breakdown — rotations: 13.0%, physics: 20.6%, landing: 20.6%
 ```
 
-The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 12 tricks with Earth, Moon, and Mars flight conditions.
+The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 24 tricks with Earth, Moon, and Mars flight conditions.
 
 ## Install
 
@@ -55,13 +55,13 @@ Each task expects this JSON shape:
 {"rotations":{"long":1,"vertical":0,"cross":0},"airtimeS":0.571,"peakHeightM":0.4,"landsWheelsDown":true,"canFlipFinishInAir":true}
 ```
 
-The grader gives 36% to exact signed rotations together, 34% to airtime and peak height within 5%, and 30% to landing and feasibility booleans once rotations match. One surrounding Markdown fence or a short preamble before the JSON is fine. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
+The grader gives 24% to exact signed rotations together, 38% to airtime and peak height within 5%, and 38% to the landing and feasibility booleans once both physics values are within tolerance. `landsWheelsDown` is scored against the expected rotation geometry and `canFlipFinishInAir` against the expected airtime, so half-flip tricks and underpowered launches cannot be answered from memory. One surrounding Markdown fence or prose around the JSON is fine; when several objects appear, the last balanced one wins. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
 
 See [grading](docs/grading.md) for failure modes and weights and [methodology](docs/methodology.md) for axes, equations, and assumptions.
 
 ## Data and reproducibility
 
-`data/tricks.json` contains the reviewed trick table and its source links. `data/tasks.jsonl` contains 36 public tasks: 12 tricks across three gravity and launch-speed variants. Rebuild them exactly:
+`data/tricks.json` contains the reviewed trick table and its source links. `data/tasks.jsonl` contains 72 public tasks: 24 tricks across three gravity and launch-speed variants, including half flips that cannot land wheels-down and launches too weak to finish the rotation. Rebuild them exactly:
 
 ```bash
 node scripts/gen-tasks.mjs --seed 20261015 --split public
@@ -118,7 +118,7 @@ Put authentication and rate limits in front of a public score endpoint.
 - Minimum trick times are declared benchmark assumptions, not measured athlete limits.
 - Trick axes compress motions such as an impossible into one idealized rotation.
 - Public prompts can enter training data. Use a fresh private seed for final comparisons.
-- A 36-task sample has wide confidence intervals and should not support small ranking claims.
+- A 72-task sample has wide confidence intervals and should not support small ranking claims.
 - The grader checks the stated model, not whether a generated animation looks convincing.
 
 ## Prior art and sources
