@@ -23,10 +23,9 @@ export function aggregateBreakdown(
     const submission = row.submission as Trace | undefined;
     if (!task || !submission) continue;
     const parts = skateboardFieldScores(task, submission);
-    if (!parts) continue;
-    rotations += parts.rotations;
-    physics += parts.physics;
-    landing += parts.landing;
+    rotations += parts?.rotations ?? 0;
+    physics += parts?.physics ?? 0;
+    landing += parts?.landing ?? 0;
     count += 1;
   }
   if (count === 0) return { rotations: 0, physics: 0, landing: 0 };
