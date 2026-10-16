@@ -20,9 +20,9 @@ export function aggregateBreakdown(
   let count = 0;
   for (const row of rows) {
     const task = byId.get(row.taskId);
+    if (!task) continue;
     const submission = row.submission as Trace | undefined;
-    if (!task || !submission) continue;
-    const parts = skateboardFieldScores(task, submission);
+    const parts = submission ? skateboardFieldScores(task, submission) : undefined;
     rotations += parts?.rotations ?? 0;
     physics += parts?.physics ?? 0;
     landing += parts?.landing ?? 0;
