@@ -1,6 +1,6 @@
 {
   "name": "benchmark-skateboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI benchmark for skateboard trick rotations, projectile physics, and deterministic model evaluation.",
   "keywords": [
     "ai-benchmark",
