@@ -19,6 +19,8 @@ A real offline run on the 36 public tasks starts like this:
 - Score: **58.3%**
 - 95% CI: 41.7%–72.2%
 - Tasks: 36
+
+Breakdown — rotations: 36.0%, physics: 34.0%, landing: 30.0%
 ```
 
 The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 12 tricks with Earth, Moon, and Mars flight conditions.
@@ -53,7 +55,7 @@ Each task expects this JSON shape:
 {"rotations":{"long":1,"vertical":0,"cross":0},"airtimeS":0.571,"peakHeightM":0.4,"landsWheelsDown":true,"canFlipFinishInAir":true}
 ```
 
-The grader gives 36% to exact signed rotations, 34% to airtime and peak height within 5%, and 30% to exact landing and feasibility booleans. Wrong rotation signs lose credit: a heelflip is not a kickflip. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason, and the report includes a seeded bootstrap 95% confidence interval.
+The grader gives 36% to exact signed rotations together, 34% to airtime and peak height within 5%, and 30% to landing and feasibility booleans once rotations match. One surrounding Markdown fence or a short preamble before the JSON is fine. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
 
 See [grading](docs/grading.md) for failure modes and weights and [methodology](docs/methodology.md) for axes, equations, and assumptions.
 
@@ -68,10 +70,10 @@ node scripts/gen-tasks.mjs --seed 20261015 --split public
 Generate a private candidate split with a different seed:
 
 ```bash
-node scripts/gen-tasks.mjs --seed 43110 --split hidden
+node scripts/gen-tasks.mjs --seed 88200416 --split hidden
 ```
 
-The hidden file is gitignored; keep it outside public reports and packages. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
+The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point any surface at another split with `--tasks <path>` on the CLI, `run(adapter, { tasks })` in the SDK, or `?tasks=` on the HTTP API. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
