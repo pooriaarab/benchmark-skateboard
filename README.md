@@ -55,7 +55,7 @@ Each task expects this JSON shape:
 {"rotations":{"long":1,"vertical":0,"cross":0},"airtimeS":0.571,"peakHeightM":0.4,"landsWheelsDown":true,"canFlipFinishInAir":true}
 ```
 
-The grader gives 36% to exact signed rotations together, 34% to airtime and peak height within 5%, and 30% to landing and feasibility booleans once rotations match. One surrounding Markdown fence or a short preamble before the JSON is fine. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
+The grader gives 24% to exact signed rotations together, 38% to airtime and peak height within 5%, and 38% to landing and feasibility booleans, which count only when airtime and peak height are both within tolerance. One surrounding Markdown fence, a short preamble, or trailing prose around the JSON is fine. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
 
 See [grading](docs/grading.md) for failure modes and weights and [methodology](docs/methodology.md) for axes, equations, and assumptions.
 
