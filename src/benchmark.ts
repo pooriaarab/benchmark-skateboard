@@ -8,7 +8,7 @@ export { loadTasks, loadTasksFile, setTasksPath, getTasksPath } from "./tasks.js
 export const benchmark = defineBenchmark({
   id: "benchmark-skateboard",
   name: "Skateboard Physics",
-  tagline: "Can a model land the math behind twelve skateboard tricks?",
+  tagline: "Can a model land the math behind two dozen skateboard tricks?",
   tags: ["viral", "silly", "science"],
   category: "physical-reasoning",
   whatItMeasures:
@@ -50,11 +50,11 @@ export const benchmark = defineBenchmark({
       howToGet: "Run `node scripts/gen-tasks.mjs --seed 20261015 --split public` from the repository root.",
       retrievedAt: "2026-10-15T00:00:00.000Z",
       contaminationNotes:
-        "The 36 public tasks use seed 20261015. For a hidden split, run `node scripts/gen-tasks.mjs --seed N --split hidden`; `.hidden/tasks.jsonl` is gitignored and must remain private.",
+        "The 72 public tasks use seed 20261015. For a hidden split, run `node scripts/gen-tasks.mjs --seed N --split hidden`; `.hidden/tasks.jsonl` is gitignored and must remain private.",
       refresh: "Generate and review a new public seed for each planned minor data release; do not replace a release in place.",
     },
   ],
   gradingMethod:
-    "Strict JSON shape; exact signed rotations in turns; 5% relative tolerance for airtime and peak height; landing booleans only after rotations match.",
+    "Strict JSON shape; exact signed rotations in turns; 5% relative tolerance for airtime and peak height; landing and feasibility booleans scored only when both physics values are within tolerance.",
   shareCardTitle: "Skateboard Physics",
 });

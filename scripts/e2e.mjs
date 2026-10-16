@@ -26,7 +26,7 @@ assert.ok(packList[0].files.every((file) => !file.path.startsWith(".hidden") && 
 
 const listed = JSON.parse((await cli("list", "--json")).stdout);
 const taskCount = listed.tasks.length;
-assert.equal(taskCount, 36);
+assert.equal(taskCount, 72);
 assert.equal(hiddenTasks.length, taskCount);
 const firstTask = listed.tasks[0];
 assert.ok(firstTask);
@@ -85,6 +85,15 @@ for (const submission of badSubmissions) {
   badScores.push(mean(scores.map((item) => item.score)));
 }
 assert.ok(badScores.every((score) => score <= 0.2));
+
+// Both booleans come out false on about half the tasks in each split.
+for (const split of [tasks, hiddenTasks]) {
+  const exps = split.map((task) => JSON.parse(task.expected));
+  const landsTrue = exps.filter((exp) => exp.landsWheelsDown).length;
+  const flipTrue = exps.filter((exp) => exp.canFlipFinishInAir).length;
+  assert.ok(landsTrue >= 28 && landsTrue <= 44, `landsWheelsDown true ${landsTrue}/${split.length}`);
+  assert.ok(flipTrue >= 28 && flipTrue <= 44, `canFlipFinishInAir true ${flipTrue}/${split.length}`);
+}
 
 const fenced = await benchmark.score(firstTask, {
   answer: `Here is the result:\n\`\`\`json\n${firstTask.expected}\n\`\`\``,
@@ -193,7 +202,7 @@ const publicOnHidden = await Promise.all(
 );
 const publicOnHiddenMean = mean(publicOnHidden.map((item) => item.score));
 assert.ok(publicOnHiddenMean < 1);
-assert.ok(publicOnHiddenMean <= 0.85);
+assert.ok(publicOnHiddenMean <= 0.3);
 
 const altListed = JSON.parse((await cli("list", "--tasks", hiddenPath, "--json")).stdout);
 assert.equal(altListed.tasks.length, taskCount);
@@ -287,7 +296,7 @@ const artifact = {
 };
 await writeFile("artifacts/e2e-report.json", `${JSON.stringify(artifact, null, 2)}\n`);
 const provenance = await readFile("data/PROVENANCE.md", "utf8");
-assert.match(provenance, /36 public tasks use seed 20261015/);
+assert.match(provenance, /72 public tasks use seed 20261015/);
 console.log(
   `e2e: ${artifact.task_count} tasks, ${Object.keys(routes).length} routes, ${toolNames.length} tools, ` +
     `visible policy solved ${artifact.visible_solved}, adversarial answers rejected -> all surfaces passed, ok`,

@@ -38,18 +38,60 @@ const shuffle = (items) => {
 const pairs = glossary.tricks.flatMap((trick) => worlds.map((world) => ({ trick, world })));
 const ordered = split === "hidden" ? shuffle(pairs) : pairs;
 const idPrefix = split === "hidden" ? "hidden" : "public";
+const publicAirtimes = new Map();
+if (split === "hidden") {
+  try {
+    const publicText = await readFile(new URL("../data/tasks.jsonl", import.meta.url), "utf8");
+    for (const line of publicText.trim().split("\n")) {
+      const task = JSON.parse(line);
+      publicAirtimes.set(`${task.metadata.trick}:${task.metadata.world}`, JSON.parse(task.expected).airtimeS);
+    }
+  } catch {
+    // no public file to diverge from
+  }
+}
+const lowestLaunchSpeed = 0.3;
+const underpoweredRate = 0.55;
 const tasks = ordered.map(({ trick, world }) => {
-  const launchSpeed = round(world.speedMin + random() * (world.speedMax - world.speedMin));
+  const neededSpeed = (world.gravity * trick.minimumAirtimeS) / 2;
+  const lowCeiling = Math.min(world.speedMax, neededSpeed * 0.9);
+  const highFloor = Math.max(world.speedMin, neededSpeed * 1.1);
+  const canUnderpower = lowCeiling > lowestLaunchSpeed;
+  const canBeFeasible = highFloor <= world.speedMax;
+  const underpowered = !canBeFeasible || (canUnderpower && random() < underpoweredRate);
+  const low = underpowered ? lowestLaunchSpeed : highFloor;
+  const high = underpowered ? lowCeiling : world.speedMax;
+  const draw = (a, b) => round(a + random() * (b - a));
+  let launchSpeed = draw(low, high);
+  const twinAirtime = publicAirtimes.get(`${trick.id}:${world.id}`);
+  if (twinAirtime !== undefined) {
+    const gap = (speed) => Math.abs((2 * speed) / world.gravity / twinAirtime - 1);
+    const bands = [[low, high]];
+    if (canUnderpower && canBeFeasible) bands.push(underpowered ? [highFloor, world.speedMax] : [lowestLaunchSpeed, lowCeiling]);
+    let best = launchSpeed;
+    let bestGap = gap(launchSpeed);
+    for (const [a, b] of bands) {
+      for (let tries = 0; tries < 12 && gap(launchSpeed) <= 0.1; tries += 1) {
+        launchSpeed = draw(a, b);
+        if (gap(launchSpeed) > bestGap) {
+          best = launchSpeed;
+          bestGap = gap(launchSpeed);
+        }
+      }
+      if (gap(launchSpeed) > 0.1) break;
+    }
+    if (gap(launchSpeed) <= 0.1) launchSpeed = best;
+  }
   const airtimeS = round((2 * launchSpeed) / world.gravity);
   const peakHeightM = round((launchSpeed ** 2) / (2 * world.gravity));
   const rotations = trick.rotations;
   const landsWheelsDown = Number.isInteger(rotations.long) && Number.isInteger(rotations.cross);
   const canFlipFinishInAir = airtimeS + 1e-9 >= trick.minimumAirtimeS;
   const answer = { rotations, airtimeS, peakHeightM, landsWheelsDown, canFlipFinishInAir };
-  const article = /^[aeiou]/i.test(trick.name) ? "an" : "a";
+  const article = /^[aeiou]/i.test(trick.name) && !/^one-/i.test(trick.name) ? "an" : "a";
   const place =
     world.id === "earth" ? "Earth" : world.id === "moon" ? "the Moon" : "Mars";
-  const prompt = `A skater attempts ${article} ${trick.name.toLowerCase()} on ${place}. ${trick.description}\nUse gravity ${world.gravity} m/s^2 and upward launch speed ${launchSpeed} m/s. Ignore drag and landing height differences. Airtime is 2*v0/g; peak height is v0^2/(2*g). Rotations are in full turns (1 means one 360° rotation on that axis). ${glossary.axisConvention} This trick needs at least ${trick.minimumAirtimeS} s to finish. Return only JSON: {"rotations":{"long":number,"vertical":number,"cross":number},"airtimeS":number,"peakHeightM":number,"landsWheelsDown":boolean,"canFlipFinishInAir":boolean}. Round calculated values to three decimals.`;
+  const prompt = `A skater attempts ${article} ${trick.name.toLowerCase()} on ${place}. ${trick.description}\nUse gravity ${world.gravity} m/s^2 and upward launch speed ${launchSpeed} m/s. Ignore drag and landing height differences. Airtime is 2*v0/g; peak height is v0^2/(2*g). Rotations are in full turns (1 means one 360° rotation on that axis). ${glossary.axisConvention} This trick needs at least ${trick.minimumAirtimeS} s to finish. Set landsWheelsDown true only when the long- and cross-axis turns are whole numbers; set canFlipFinishInAir true only when the airtime meets that minimum. Return only JSON: {"rotations":{"long":number,"vertical":number,"cross":number},"airtimeS":number,"peakHeightM":number,"landsWheelsDown":boolean,"canFlipFinishInAir":boolean}. Round calculated values to three decimals.`;
   return {
     id: `${idPrefix}-${trick.id}-${world.id}-${seed}`,
     kind: "single",
