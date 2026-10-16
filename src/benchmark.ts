@@ -1,11 +1,11 @@
-import { defineBenchmark } from "benchmark-core";
+import { defineBenchmark, type BenchmarkDefinition } from "benchmark-core";
 import { gradeSkateboard } from "./grading.js";
-import { loadTasks } from "./tasks.js";
+import { loadTasksFile } from "./tasks.js";
 
 export { gradeSkateboard, parseAnswer } from "./grading.js";
-export { loadTasks, loadTasksFile, setTasksPath, getTasksPath } from "./tasks.js";
+export { loadTasks, loadTasksFile, setTasksPath, getTasksPath, resolvePackagedTasksPath } from "./tasks.js";
 
-export const benchmark = defineBenchmark({
+const definition: BenchmarkDefinition = {
   id: "benchmark-skateboard",
   name: "Skateboard Physics",
   tagline: "Can a model land the math behind two dozen skateboard tricks?",
@@ -15,7 +15,6 @@ export const benchmark = defineBenchmark({
     "Signed 3D rotation understanding, projectile-motion arithmetic, landing orientation, and whether a skateboard trick fits its airtime.",
   version: "0.2.0",
   status: "alpha",
-  loadTasks,
   grade: gradeSkateboard,
   provenance: [
     {
@@ -57,4 +56,10 @@ export const benchmark = defineBenchmark({
   gradingMethod:
     "Strict JSON shape; exact signed rotations in turns; 5% relative tolerance for airtime and peak height; landing and feasibility booleans scored only when both physics values are within tolerance.",
   shareCardTitle: "Skateboard Physics",
-});
+};
+
+export function createBenchmark(tasksPath?: string) {
+  return defineBenchmark({ ...definition, loadTasks: () => loadTasksFile(tasksPath) });
+}
+
+export const benchmark = createBenchmark();

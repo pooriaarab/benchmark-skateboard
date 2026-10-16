@@ -9,10 +9,12 @@ import {
   openrouterAdapter,
   renderMarkdown,
   run as runBenchmark,
+  serve,
 } from "benchmark-core";
-import { benchmark } from "./benchmark.js";
+import { createBenchmark } from "./benchmark.js";
+import { createSkateboardHandler } from "./api.js";
+import { startMcp } from "./mcp.js";
 import { formatBreakdownLine, withSkateboardBreakdown } from "./report.js";
-import { withTasksPath } from "./tasks.js";
 
 function extractTasksFlag(argv: string[]): { args: string[]; tasksPath?: string } {
   const next: string[] = [];
@@ -38,6 +40,8 @@ function adapter(provider: string, model: string, seed: number) {
   throw new Error("--provider must be openrouter, openai, or mock.");
 }
 
+const { args, tasksPath } = extractTasksFlag(process.argv.slice(2));
+const benchmark = createBenchmark(tasksPath);
 const core = createCli(benchmark, { bin: "benchmark-skateboard" });
 
 async function runCommand(argv: string[]): Promise<number> {
@@ -116,17 +120,33 @@ async function scoreCommand(argv: string[]): Promise<number> {
   return 0;
 }
 
-const { args, tasksPath } = extractTasksFlag(process.argv.slice(2));
+async function serveCommand(argv: string[]): Promise<number> {
+  const parsed = parseArgs({
+    args: argv.filter((arg) => arg !== "--json"),
+    options: { host: { type: "string" } },
+    allowPositionals: true,
+    strict: true,
+  });
+  if (parsed.positionals.length > 1) throw new Error("serve accepts at most one port.");
+  const port = Number(parsed.positionals[0] ?? process.env.PORT ?? 3000);
+  const hostname = parsed.values.host ?? "127.0.0.1";
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("serve port must be an integer from 0 to 65535.");
+  if (!hostname.trim()) throw new Error("--host must not be empty.");
+  await serve(createSkateboardHandler(benchmark), { port, hostname });
+  console.log(`Listening on http://${hostname}:${port}`);
+  return 0;
+}
+
 if (args[0] === "run" && args.includes("--provider") && args[args.indexOf("--provider") + 1] === "mock" && !args.includes("--model")) {
   args.push("--model", "offline");
 }
 
 try {
-  process.exitCode = await withTasksPath(tasksPath, async () => {
-    if (args[0] === "run") return runCommand(args.slice(1));
-    if (args[0] === "score") return scoreCommand(args.slice(1));
-    return core.main(args);
-  });
+  if (args[0] === "run") process.exitCode = await runCommand(args.slice(1));
+  else if (args[0] === "score") process.exitCode = await scoreCommand(args.slice(1));
+  else if (args[0] === "serve") process.exitCode = await serveCommand(args.slice(1));
+  else if (args[0] === "mcp") await startMcp(tasksPath === undefined ? undefined : { tasksPath });
+  else process.exitCode = await core.main(args);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
