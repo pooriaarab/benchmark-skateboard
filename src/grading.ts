@@ -13,7 +13,65 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const hasOnly = (value: Record<string, unknown>, keys: string[]) =>
   Object.keys(value).length === keys.length && keys.every((key) => key in value);
 
-/** Strip one surrounding markdown fence and parse the last JSON object in the text. */
+function balancedObjects(text: string): string[] {
+  const found: string[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+    } else if (char === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (char === "}") {
+      if (depth > 0) depth -= 1;
+      if (depth === 0 && start >= 0) {
+        found.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  if (found.length > 0) return found;
+  // A stray unmatched "{" earlier in the text can swallow a real object; retry per brace.
+  const spans: Array<[number, number]> = [];
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] !== "{") continue;
+    let inner = 0;
+    let innerString = false;
+    let innerEscaped = false;
+    for (let cursor = index; cursor < text.length; cursor += 1) {
+      const char = text[cursor];
+      if (innerString) {
+        if (innerEscaped) innerEscaped = false;
+        else if (char === "\\") innerEscaped = true;
+        else if (char === '"') innerString = false;
+        continue;
+      }
+      if (char === '"') innerString = true;
+      else if (char === "{") inner += 1;
+      else if (char === "}") {
+        inner -= 1;
+        if (inner === 0) {
+          spans.push([index, cursor + 1]);
+          break;
+        }
+      }
+    }
+  }
+  spans.sort((a, b) => a[1] - a[0] - (b[1] - b[0]));
+  return spans.map(([start, end]) => text.slice(start, end));
+}
+
+/** Strip one surrounding markdown fence and parse the last balanced JSON object. */
 export function extractAnswerJson(text: string): unknown | undefined {
   if (text.length > 20_000) return undefined;
   let trimmed = text.trim();
@@ -23,16 +81,17 @@ export function extractAnswerJson(text: string): unknown | undefined {
     const inlineFence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (inlineFence?.[1]) trimmed = inlineFence[1].trim();
   }
-  let last: unknown;
-  for (let index = 0; index < trimmed.length; index += 1) {
-    if (trimmed[index] !== "{") continue;
+  const objects = balancedObjects(trimmed);
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    const candidate = objects[index];
+    if (candidate === undefined) continue;
     try {
-      last = JSON.parse(trimmed.slice(index));
+      return JSON.parse(candidate);
     } catch {
-      // keep scanning for a later object
+      // try the previous balanced object
     }
   }
-  return last;
+  return undefined;
 }
 
 export function parseAnswer(value: unknown): Answer | undefined {
@@ -57,6 +116,44 @@ function minimumAirtime(task: Task): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+const WEIGHTS = {
+  rotations: 0.24,
+  airtimeS: 0.2,
+  peakHeightM: 0.18,
+  landsWheelsDown: 0.19,
+  canFlipFinishInAir: 0.19,
+} as const;
+
+function expectedLands(expected: Answer): boolean {
+  return Number.isInteger(expected.rotations.long) && Number.isInteger(expected.rotations.cross);
+}
+
+function fieldChecks(
+  task: Task,
+  answer: Answer,
+  expected: Answer,
+): Array<[keyof typeof WEIGHTS, number, boolean]> {
+  const minimum = minimumAirtime(task);
+  const rotationsMatch =
+    answer.rotations.long === expected.rotations.long &&
+    answer.rotations.vertical === expected.rotations.vertical &&
+    answer.rotations.cross === expected.rotations.cross;
+  const physicsOk =
+    close(answer.airtimeS, expected.airtimeS) && close(answer.peakHeightM, expected.peakHeightM);
+  const expectedFlip = minimum !== undefined && expected.airtimeS + 1e-9 >= minimum;
+  return [
+    ["rotations", WEIGHTS.rotations, rotationsMatch],
+    ["airtimeS", WEIGHTS.airtimeS, close(answer.airtimeS, expected.airtimeS)],
+    ["peakHeightM", WEIGHTS.peakHeightM, close(answer.peakHeightM, expected.peakHeightM)],
+    ["landsWheelsDown", WEIGHTS.landsWheelsDown, physicsOk && answer.landsWheelsDown === expectedLands(expected)],
+    [
+      "canFlipFinishInAir",
+      WEIGHTS.canFlipFinishInAir,
+      physicsOk && minimum !== undefined && answer.canFlipFinishInAir === expectedFlip,
+    ],
+  ];
+}
+
 export function skateboardFieldScores(
   task: Task,
   submission: Trace,
@@ -64,22 +161,14 @@ export function skateboardFieldScores(
   const answer = parseAnswer(submission.answer);
   const expected = parseAnswer(task.expected);
   if (!answer || !expected) return undefined;
-  const rotationsMatch =
-    answer.rotations.long === expected.rotations.long &&
-    answer.rotations.vertical === expected.rotations.vertical &&
-    answer.rotations.cross === expected.rotations.cross;
-  const minimum = minimumAirtime(task);
-  const rotScore = rotationsMatch ? 0.36 : 0;
-  const physScore =
-    (close(answer.airtimeS, expected.airtimeS) ? 0.18 : 0) +
-    (close(answer.peakHeightM, expected.peakHeightM) ? 0.16 : 0);
-  const landsOk =
-    Number.isInteger(answer.rotations.long) && Number.isInteger(answer.rotations.cross);
-  const flipOk = minimum !== undefined && answer.airtimeS + 1e-9 >= minimum;
-  const landScore =
-    (rotationsMatch && answer.landsWheelsDown === landsOk ? 0.15 : 0) +
-    (rotationsMatch && minimum !== undefined && answer.canFlipFinishInAir === flipOk ? 0.15 : 0);
-  return { rotations: rotScore, physics: physScore, landing: landScore };
+  const checks = fieldChecks(task, answer, expected);
+  const sum = (names: (keyof typeof WEIGHTS)[]) =>
+    checks.reduce((total, [name, weight, pass]) => total + (names.includes(name) && pass ? weight : 0), 0);
+  return {
+    rotations: sum(["rotations"]),
+    physics: sum(["airtimeS", "peakHeightM"]),
+    landing: sum(["landsWheelsDown", "canFlipFinishInAir"]),
+  };
 }
 
 export function gradeSkateboard(task: Task, submission: Trace): TaskScore {
@@ -89,29 +178,7 @@ export function gradeSkateboard(task: Task, submission: Trace): TaskScore {
     return { score: 0, reason: "Answer must be one JSON object with all seven fields and no extras (one surrounding ``` fence allowed)." };
   }
   if (!expected) throw new Error(`Task ${task.id} has an invalid reference answer.`);
-  const minimum = minimumAirtime(task);
-  const rotationsMatch =
-    answer.rotations.long === expected.rotations.long &&
-    answer.rotations.vertical === expected.rotations.vertical &&
-    answer.rotations.cross === expected.rotations.cross;
-  const landsOk =
-    Number.isInteger(answer.rotations.long) && Number.isInteger(answer.rotations.cross);
-  const flipOk = minimum !== undefined && answer.airtimeS + 1e-9 >= minimum;
-  const checks: Array<[string, number, boolean]> = [
-    ["rotations", 0.36, rotationsMatch],
-    ["airtimeS", 0.18, close(answer.airtimeS, expected.airtimeS)],
-    ["peakHeightM", 0.16, close(answer.peakHeightM, expected.peakHeightM)],
-    [
-      "landsWheelsDown",
-      0.15,
-      rotationsMatch && answer.landsWheelsDown === landsOk,
-    ],
-    [
-      "canFlipFinishInAir",
-      0.15,
-      rotationsMatch && minimum !== undefined && answer.canFlipFinishInAir === flipOk,
-    ],
-  ];
+  const checks = fieldChecks(task, answer, expected);
   const failed = checks.filter(([, , pass]) => !pass).map(([name]) => name);
   const score = checks.reduce((sum, [, weight, pass]) => sum + (pass ? weight : 0), 0);
   const parts = skateboardFieldScores(task, submission);
