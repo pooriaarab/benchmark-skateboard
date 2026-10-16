@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer as createNetServer } from "node:net";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { unlinkSync } from "node:fs";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -11,6 +12,12 @@ const cli = (...args) => execFile(process.execPath, ["dist/cli.js", ...args], { 
 
 const hiddenSeed = 88200416;
 const hiddenPath = ".hidden/tasks.jsonl";
+// The hidden split is gitignored; remove it even if an assertion fails mid-run.
+process.on("exit", () => {
+  try {
+    unlinkSync(hiddenPath);
+  } catch {}
+});
 const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
 const round3 = (value) => Math.round(value * 1000) / 1000;
 
@@ -149,6 +156,8 @@ for (const task of [...tasks, ...hiddenTasks]) {
 }
 assert.ok(Math.max(...probe.wrongFormula) < 0.3, `wrong-formula max ${Math.max(...probe.wrongFormula)}`);
 assert.ok(Math.max(...probe.tableOnly) < 0.3, `table-lookup max ${Math.max(...probe.tableOnly)}`);
+// airtime 99 earns rotations and peak credit but must not earn gated landing credit.
+assert.ok(Math.max(...probe.airtime99) < 0.5, `airtime-99 max ${Math.max(...probe.airtime99)}`);
 
 // Visible-information policy: solve every task from the prompt text alone.
 const glossary = JSON.parse(await readFile("data/tricks.json", "utf8"));
@@ -273,8 +282,6 @@ try {
 } finally {
   await client.close();
 }
-
-await unlink(hiddenPath);
 
 const artifact = {
   task_count: report.rows.length,
