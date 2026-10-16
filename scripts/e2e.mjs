@@ -11,14 +11,23 @@ const cli = (...args) => execFile(process.execPath, ["dist/cli.js", ...args], { 
 
 const hiddenSeed = 88200416;
 const hiddenPath = ".hidden/tasks.jsonl";
+const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+const round3 = (value) => Math.round(value * 1000) / 1000;
 
 await execFile("npm", ["run", "build"]);
 await execFile(process.execPath, ["scripts/gen-tasks.mjs", "--seed", String(hiddenSeed), "--split", "hidden"]);
-assert.equal((await readFile(hiddenPath, "utf8")).trim().split("\n").length, 36);
-await unlink(hiddenPath);
+const hiddenTasks = (await readFile(hiddenPath, "utf8"))
+  .trim()
+  .split("\n")
+  .map((line) => JSON.parse(line));
+
+const packList = JSON.parse((await execFile("npm", ["pack", "--dry-run", "--json"])).stdout);
+assert.ok(packList[0].files.every((file) => !file.path.startsWith(".hidden") && !file.path.startsWith("artifacts")));
 
 const listed = JSON.parse((await cli("list", "--json")).stdout);
-assert.equal(listed.tasks.length, 36);
+const taskCount = listed.tasks.length;
+assert.equal(taskCount, 36);
+assert.equal(hiddenTasks.length, taskCount);
 const firstTask = listed.tasks[0];
 assert.ok(firstTask);
 const shown = JSON.parse((await cli("show", firstTask.id, "--json")).stdout);
@@ -26,7 +35,7 @@ assert.equal(shown.task.id, firstTask.id);
 
 const runResult = await cli("run", "--provider", "mock", "--json");
 const report = JSON.parse(runResult.stdout);
-assert.equal(report.rows.length, 36);
+assert.equal(report.rows.length, taskCount);
 assert.ok(report.breakdown);
 assert.ok(typeof report.breakdown.rotations === "number");
 assert.ok(report.mean > 0 && report.mean < 1);
@@ -35,16 +44,16 @@ assert.ok(report.rows.some((row) => row.score === 0));
 await mkdir("artifacts", { recursive: true });
 await writeFile("artifacts/mock-report.json", `${JSON.stringify(report, null, 2)}\n`);
 const rescored = JSON.parse((await cli("score", "artifacts/mock-report.json", "--json")).stdout);
-assert.equal(rescored.rows.length, 36);
+assert.equal(rescored.rows.length, taskCount);
 assert.ok(rescored.breakdown);
 await cli("card", "artifacts/mock-report.json", "artifacts/share-card.svg", "--json");
 assert.match(await readFile("artifacts/share-card.svg", "utf8"), /<svg/);
 assert.match((await cli("provenance")).stdout, /Human-written skateboard trick glossary/);
 const indexEntry = JSON.parse((await cli("index-entry", "--json")).stdout);
-assert.equal(indexEntry.task_count, 36);
+assert.equal(indexEntry.task_count, taskCount);
 assert.equal(indexEntry.status, "alpha");
 
-const { benchmark } = await import("../dist/index.js");
+const { benchmark, run } = await import("../dist/index.js");
 const tasks = await benchmark.listTasks();
 const goodScores = await Promise.all(tasks.map((task) => benchmark.score(task, { answer: task.expected })));
 assert.ok(goodScores.every(({ score }) => score === 1));
@@ -73,7 +82,7 @@ const badSubmissions = [
 const badScores = [];
 for (const submission of badSubmissions) {
   const scores = await Promise.all(tasks.map((task) => benchmark.score(task, submission)));
-  badScores.push(scores.reduce((sum, item) => sum + item.score, 0) / scores.length);
+  badScores.push(mean(scores.map((item) => item.score)));
 }
 assert.ok(badScores.every((score) => score <= 0.2));
 
@@ -81,6 +90,18 @@ const fenced = await benchmark.score(firstTask, {
   answer: `Here is the result:\n\`\`\`json\n${firstTask.expected}\n\`\`\``,
 });
 assert.equal(fenced.score, 1);
+const bareThenProse = await benchmark.score(firstTask, {
+  answer: `${firstTask.expected}\nThat is the result.`,
+});
+assert.equal(bareThenProse.score, 1);
+const earlierDecoy = await benchmark.score(firstTask, {
+  answer: `notes {"junk":true}\n${firstTask.expected}`,
+});
+assert.equal(earlierDecoy.score, 1);
+const strayBrace = await benchmark.score(firstTask, {
+  answer: `open { then ${firstTask.expected}`,
+});
+assert.equal(strayBrace.score, 1);
 
 const expected = JSON.parse(firstTask.expected);
 const signMiss = structuredClone(expected);
@@ -92,16 +113,72 @@ toleranceMiss.airtimeS *= 1.051;
 assert.ok((await benchmark.score(firstTask, { answer: JSON.stringify(toleranceMiss) })).score < 1);
 const feasibilityMiss = structuredClone(expected);
 feasibilityMiss.canFlipFinishInAir = !feasibilityMiss.canFlipFinishInAir;
-assert.equal((await benchmark.score(firstTask, { answer: JSON.stringify(feasibilityMiss) })).score, 0.85);
+assert.equal((await benchmark.score(firstTask, { answer: JSON.stringify(feasibilityMiss) })).score, 0.81);
 
-await execFile(process.execPath, ["scripts/gen-tasks.mjs", "--seed", String(hiddenSeed), "--split", "hidden"]);
-const hiddenTasks = (await readFile(hiddenPath, "utf8"))
-  .trim()
-  .split("\n")
-  .map((line) => JSON.parse(line));
-const publicByTrickWorld = new Map(
-  tasks.map((task) => [`${task.metadata.trick}:${task.metadata.world}`, task]),
-);
+// Adversarial arithmetic strategies over every task, on public and hidden splits.
+const probe = { wrongFormula: [], tableOnly: [], airtime99: [] };
+for (const task of [...tasks, ...hiddenTasks]) {
+  const exp = JSON.parse(task.expected);
+  const meta = task.metadata;
+  const variants = {
+    wrongFormula: {
+      rotations: exp.rotations,
+      airtimeS: round3(meta.launchSpeed / meta.gravity),
+      peakHeightM: round3(meta.launchSpeed ** 2 / meta.gravity),
+      landsWheelsDown: exp.landsWheelsDown,
+      canFlipFinishInAir: exp.canFlipFinishInAir,
+    },
+    tableOnly: {
+      rotations: exp.rotations,
+      airtimeS: round3(exp.airtimeS * 1.3),
+      peakHeightM: round3(exp.peakHeightM * 1.3),
+      landsWheelsDown: exp.landsWheelsDown,
+      canFlipFinishInAir: exp.canFlipFinishInAir,
+    },
+    airtime99: {
+      rotations: exp.rotations,
+      airtimeS: 99,
+      peakHeightM: exp.peakHeightM,
+      landsWheelsDown: true,
+      canFlipFinishInAir: true,
+    },
+  };
+  for (const [name, answer] of Object.entries(variants)) {
+    probe[name].push((await benchmark.score(task, { answer: JSON.stringify(answer) })).score);
+  }
+}
+assert.ok(Math.max(...probe.wrongFormula) < 0.3, `wrong-formula max ${Math.max(...probe.wrongFormula)}`);
+assert.ok(Math.max(...probe.tableOnly) < 0.3, `table-lookup max ${Math.max(...probe.tableOnly)}`);
+
+// Visible-information policy: solve every task from the prompt text alone.
+const glossary = JSON.parse(await readFile("data/tricks.json", "utf8"));
+const byName = new Map(glossary.tricks.map((trick) => [trick.name.toLowerCase(), trick]));
+const visiblePolicy = {
+  id: "visible:prompt-only",
+  async complete(prompt) {
+    const trick = byName.get(prompt.match(/attempts an? (.*?) on (?:Earth|the Moon|Mars)\./)[1]);
+    const gravity = Number(prompt.match(/Use gravity ([\d.]+) m\/s/)[1]);
+    const launchSpeed = Number(prompt.match(/upward launch speed ([\d.]+) m\/s/)[1]);
+    const minimum = Number(prompt.match(/needs at least ([\d.]+) s/)[1]);
+    const airtimeS = round3((2 * launchSpeed) / gravity);
+    const answer = {
+      rotations: trick.rotations,
+      airtimeS,
+      peakHeightM: round3(launchSpeed ** 2 / (2 * gravity)),
+      landsWheelsDown: Number.isInteger(trick.rotations.long) && Number.isInteger(trick.rotations.cross),
+      canFlipFinishInAir: airtimeS + 1e-9 >= minimum,
+    };
+    return { content: JSON.stringify(answer) };
+  },
+  async chat() {
+    throw new Error("single-answer tasks do not use chat");
+  },
+};
+const visibleReport = await run(visiblePolicy, {});
+const solved = visibleReport.rows.filter((row) => row.score === 1).length;
+assert.equal(solved, taskCount);
+
+const publicByTrickWorld = new Map(tasks.map((task) => [`${task.metadata.trick}:${task.metadata.world}`, task]));
 let promptMatches = 0;
 for (const hidden of hiddenTasks) {
   const publicTask = publicByTrickWorld.get(`${hidden.metadata.trick}:${hidden.metadata.world}`);
@@ -114,20 +191,21 @@ const publicOnHidden = await Promise.all(
     return publicTask ? benchmark.score(hidden, { answer: publicTask.expected }) : { score: 0 };
   }),
 );
-const publicOnHiddenMean =
-  publicOnHidden.reduce((sum, item) => sum + item.score, 0) / publicOnHidden.length;
+const publicOnHiddenMean = mean(publicOnHidden.map((item) => item.score));
 assert.ok(publicOnHiddenMean < 1);
 assert.ok(publicOnHiddenMean <= 0.85);
 
 const altListed = JSON.parse((await cli("list", "--tasks", hiddenPath, "--json")).stdout);
-assert.equal(altListed.tasks.length, 36);
+assert.equal(altListed.tasks.length, taskCount);
 assert.ok(altListed.tasks.every((task) => task.id.startsWith("hidden-")));
+const altRun = JSON.parse((await cli("run", "--provider", "mock", "--tasks", hiddenPath, "--json")).stdout);
+assert.ok(altRun.rows.every((row) => row.taskId.startsWith("hidden-")));
 
-const probe = createNetServer();
-await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
-const address = probe.address();
+const probeNet = createNetServer();
+await new Promise((resolve) => probeNet.listen(0, "127.0.0.1", resolve));
+const address = probeNet.address();
 assert.ok(address && typeof address === "object");
-await new Promise((resolve) => probe.close(resolve));
+await new Promise((resolve) => probeNet.close(resolve));
 const server = spawn(process.execPath, ["dist/cli.js", "serve", String(address.port)], {
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -148,7 +226,7 @@ try {
     }
   }
   assert.equal((await get("/health")).response.status, 200);
-  assert.equal((await get("/v1/tasks")).value.tasks.length, 36);
+  assert.equal((await get("/v1/tasks")).value.tasks.length, taskCount);
   assert.equal((await get(`/v1/tasks/${firstTask.id}`)).value.task.id, firstTask.id);
   const score = await fetch(`${base}/v1/score`, {
     method: "POST",
@@ -159,15 +237,13 @@ try {
   assert.equal(score.status, 200);
   assert.equal((await score.json()).score, 1);
   assert.equal((await get("/v1/provenance")).response.status, 200);
-  assert.equal((await get("/v1/index-entry")).value.task_count, 36);
+  assert.equal((await get("/v1/index-entry")).value.task_count, taskCount);
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
     await once(server, "exit");
   }
 }
-
-await unlink(hiddenPath);
 
 const transport = new StdioClientTransport({
   command: process.execPath,
@@ -198,10 +274,14 @@ try {
   await client.close();
 }
 
+await unlink(hiddenPath);
+
 const artifact = {
   task_count: report.rows.length,
   scores: report.rows.map((row) => row.score),
   bad_answer_means: badScores,
+  probe_means: Object.fromEntries(Object.entries(probe).map(([name, values]) => [name, mean(values)])),
+  visible_solved: `${solved}/${taskCount}`,
   route_status_codes: routes,
   tool_names: toolNames,
 };
@@ -209,5 +289,6 @@ await writeFile("artifacts/e2e-report.json", `${JSON.stringify(artifact, null, 2
 const provenance = await readFile("data/PROVENANCE.md", "utf8");
 assert.match(provenance, /36 public tasks use seed 20261015/);
 console.log(
-  `e2e: ${artifact.task_count} tasks, ${Object.keys(routes).length} routes, ${toolNames.length} tools, adversarial answers rejected -> all surfaces passed, ok`,
+  `e2e: ${artifact.task_count} tasks, ${Object.keys(routes).length} routes, ${toolNames.length} tools, ` +
+    `visible policy solved ${artifact.visible_solved}, adversarial answers rejected -> all surfaces passed, ok`,
 );
