@@ -73,7 +73,7 @@ Generate a private candidate split with a different seed:
 node scripts/gen-tasks.mjs --seed 88200416 --split hidden
 ```
 
-The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a local run at another split with `--tasks <path>` on the CLI, `run(adapter, { tasks })` in the SDK, or `BENCHMARK_SKATEBOARD_TASKS` for the HTTP API and MCP server. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
+The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` in the SDK, `?tasks=<path>` on each HTTP route, a `tasksPath` argument on MCP tools, or `BENCHMARK_SKATEBOARD_TASKS` for the HTTP API and MCP server defaults. Remote surfaces only accept paths inside the package. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
@@ -81,7 +81,7 @@ The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from
 import { benchmark, run, score } from "benchmark-skateboard";
 ```
 
-`run(adapter, options)` returns a standard `RunReport`. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
+`run(adapter, options)` returns a standard `RunReport` plus the skateboard field `breakdown`; `options.tasks` points it at a split file. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
 
 ## CLI
 
@@ -95,7 +95,7 @@ Start the stdio server:
 npx benchmark-skateboard mcp
 ```
 
-It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
+It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`. `run_benchmark` accepts `provider` (`openrouter`, `openai`, or `mock`) and returns the report with the rotations/physics/landing breakdown. Every task-reading tool accepts an optional `tasksPath` inside the package.
 
 ## HTTP API
 
@@ -109,6 +109,8 @@ Import `handler` from `benchmark-skateboard/api`, or start a local server with `
 | `POST` | `/v1/score` |
 | `GET` | `/v1/provenance` |
 | `GET` | `/v1/index-entry` |
+
+Add `?tasks=<path>` to any route to read a split file inside the package instead of the default tasks.
 
 Put authentication and rate limits in front of a public score endpoint.
 
@@ -134,7 +136,7 @@ npm run ci:local
 
 The gate builds the package, rejects trivial answers, runs the mock over every task, calls every CLI and HTTP route, opens the MCP server with the official client, and writes `artifacts/e2e-report.json`.
 
-Version 0.1.0 is alpha. Schemas and task assumptions may change before 1.0. Report defects in [GitHub Issues](https://github.com/pooriaarab/benchmark-skateboard/issues).
+Version 0.2.0 is alpha. Schemas and task assumptions may change before 1.0. Report defects in [GitHub Issues](https://github.com/pooriaarab/benchmark-skateboard/issues).
 
 ## License
 

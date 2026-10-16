@@ -6,6 +6,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { mockAdapter } from "benchmark-core";
 const execFile = promisify(execFileCallback);
 const cli = (...args) => execFile(process.execPath, ["dist/cli.js", ...args], { maxBuffer: 2_000_000 });
 
@@ -159,6 +160,14 @@ for (const task of [...tasks, ...hiddenTasks]) {
 assert.ok(Math.max(...probe.wrongFormula) < 0.3, `wrong-formula max ${Math.max(...probe.wrongFormula)}`);
 assert.ok(Math.max(...probe.tableOnly) < 0.3, `table-lookup max ${Math.max(...probe.tableOnly)}`);
 
+// A run with a tasks path must not reuse the task list of an earlier run.
+const runIds = (rows) => [...new Set(rows.map((row) => row.taskId.split("-")[0]))];
+for (const expectedIds of [["public"], ["hidden"], ["public"], ["hidden"]]) {
+  const options = expectedIds[0] === "hidden" ? { tasks: hiddenPath } : {};
+  const outcome = await run(mockAdapter({ seed: 5 }), options);
+  assert.deepEqual(runIds(outcome.rows), expectedIds);
+}
+
 // Visible-information policy: solve every task from the prompt text alone.
 const glossary = JSON.parse(await readFile("data/tricks.json", "utf8"));
 const byName = new Map(glossary.tricks.map((trick) => [trick.name.toLowerCase(), trick]));
@@ -247,10 +256,52 @@ try {
   assert.equal((await score.json()).score, 1);
   assert.equal((await get("/v1/provenance")).response.status, 200);
   assert.equal((await get("/v1/index-entry")).value.task_count, taskCount);
+  const hiddenListed = await get(`/v1/tasks?tasks=${encodeURIComponent(hiddenPath)}`);
+  assert.ok(hiddenListed.value.tasks.every((task) => task.id.startsWith("hidden-")));
+  const hiddenScore = await fetch(`${base}/v1/score?tasks=${encodeURIComponent(hiddenPath)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ taskId: hiddenTasks[0].id, submission: { answer: hiddenTasks[0].expected } }),
+  });
+  routes["POST /v1/score?tasks=hidden"] = hiddenScore.status;
+  assert.equal(hiddenScore.status, 200);
+  assert.equal((await hiddenScore.json()).score, 1);
+  assert.equal((await get("/v1/tasks?tasks=../../etc/passwd")).response.status, 400);
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
     await once(server, "exit");
+  }
+}
+
+// A `serve --tasks` launch keeps the split for every later request.
+const probeNet2 = createNetServer();
+await new Promise((resolve) => probeNet2.listen(0, "127.0.0.1", resolve));
+const address2 = probeNet2.address();
+assert.ok(address2 && typeof address2 === "object");
+await new Promise((resolve) => probeNet2.close(resolve));
+const hiddenServer = spawn(
+  process.execPath,
+  ["dist/cli.js", "serve", String(address2.port), "--tasks", hiddenPath],
+  { stdio: ["ignore", "pipe", "pipe"] },
+);
+try {
+  let served;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try {
+      served = await fetch(`http://127.0.0.1:${address2.port}/v1/tasks`);
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  const value = await served.json();
+  routes["GET /v1/tasks (serve --tasks)"] = served.status;
+  assert.ok(value.tasks.every((task) => task.id.startsWith("hidden-")));
+} finally {
+  if (hiddenServer.exitCode === null) {
+    hiddenServer.kill("SIGTERM");
+    await once(hiddenServer, "exit");
   }
 }
 
@@ -272,13 +323,24 @@ try {
     ["get_task", { taskId: firstTask.id }],
     ["score_answer", { taskId: firstTask.id, submission: { answer: firstTask.expected } }],
     ["get_provenance", {}],
+    ["list_tasks", { tasksPath: hiddenPath }],
     ["run_benchmark", { model: "offline" }],
   ];
   for (const [name, args] of calls) {
     const result = await client.callTool({ name, arguments: args });
     if (name === "run_benchmark") assert.equal(result.isError, true);
+    else if (name === "list_tasks" && args.tasksPath)
+      assert.ok(JSON.parse(result.content[0].text).tasks.every((task) => task.id.startsWith("hidden-")));
     else assert.notEqual(result.isError, true);
   }
+  const mcpRun = await client.callTool({
+    name: "run_benchmark",
+    arguments: { model: "offline", provider: "mock", tasksPath: hiddenPath },
+  });
+  assert.notEqual(mcpRun.isError, true);
+  const mcpReport = JSON.parse(mcpRun.content[0].text);
+  assert.ok(mcpReport.breakdown && typeof mcpReport.breakdown.rotations === "number");
+  assert.ok(mcpReport.rows.every((row) => row.taskId.startsWith("hidden-")));
 } finally {
   await client.close();
 }
