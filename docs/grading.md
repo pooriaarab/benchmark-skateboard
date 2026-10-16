@@ -24,6 +24,6 @@ The grader reads model text, strips one surrounding Markdown code fence when pre
 | `landsWheelsDown` | 0.15 | Matches integer long/cross rule when rotations match |
 | `canFlipFinishInAir` | 0.15 | Matches answer airtime vs prompt minimum when rotations match |
 
-Runs and rescored reports also print a breakdown mean for rotations, physics (airtime + peak), and landing (both booleans).
+Runs and rescored reports also print breakdown means for rotations, physics (airtime + peak), and landing (both booleans), averaged across every task (unparseable answers count as zero in each bucket). The HTTP API uses `BENCHMARK_SKATEBOARD_TASKS` for a non-default split; the CLI and SDK accept `--tasks` / `run({ tasks })`.
 
 Rotations are measured in full turns (1 means one 360° rotation on that axis). Viewed from the tail toward the nose: positive long-axis rotation is a kickflip and negative is a heelflip. Positive vertical rotation is frontside; negative is backside. Positive cross-axis rotation tips the nose forward.

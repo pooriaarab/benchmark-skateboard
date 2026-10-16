@@ -160,8 +160,6 @@ try {
   assert.equal((await score.json()).score, 1);
   assert.equal((await get("/v1/provenance")).response.status, 200);
   assert.equal((await get("/v1/index-entry")).value.task_count, 36);
-  const altTasks = await get(`/v1/tasks?tasks=${encodeURIComponent(hiddenPath)}`);
-  assert.equal(altTasks.value.tasks.length, 36);
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
