@@ -10,18 +10,20 @@ Can a model keep a kickflip, a heelflip, and gravity straight at the same time? 
 npx benchmark-skateboard run --provider mock
 ```
 
-A real offline run on the 36 public tasks starts like this:
+A real offline run on the 72 public tasks starts like this:
 
 ```text
 # Skateboard Physics
 
 - Model: `mock:1`
-- Score: **58.3%**
-- 95% CI: 41.7%–72.2%
-- Tasks: 36
+- Score: **54.2%**
+- 95% CI: 41.7%–65.3%
+- Tasks: 72
+
+Breakdown — rotations: 13.0%, physics: 20.6%, landing: 20.6%
 ```
 
-The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 12 tricks with Earth, Moon, and Mars flight conditions.
+The trick glossary is a human-written CC0 table checked against linked public trick definitions. A seeded MIT-licensed generator combines its 24 tricks with Earth, Moon, and Mars flight conditions.
 
 ## Install
 
@@ -53,25 +55,25 @@ Each task expects this JSON shape:
 {"rotations":{"long":1,"vertical":0,"cross":0},"airtimeS":0.571,"peakHeightM":0.4,"landsWheelsDown":true,"canFlipFinishInAir":true}
 ```
 
-The grader gives 36% to exact signed rotations, 34% to airtime and peak height within 5%, and 30% to exact landing and feasibility booleans. Wrong rotation signs lose credit: a heelflip is not a kickflip. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason, and the report includes a seeded bootstrap 95% confidence interval.
+The grader gives 24% to exact signed rotations together, 38% to airtime and peak height within 5%, and 38% to the landing and feasibility booleans once both physics values are within tolerance. `landsWheelsDown` is scored against the expected rotation geometry and `canFlipFinishInAir` against the expected airtime, so half-flip tricks and underpowered launches cannot be answered from memory. One surrounding Markdown fence or prose around the JSON is fine; when several objects appear, the last balanced one wins. Wrong rotation signs lose the whole rotation block. Invalid JSON, missing fields, extra fields, and non-finite values score zero. Every row includes a reason; `run` and `score` also print rotations/physics/landing breakdown means plus a bootstrap 95% confidence interval.
 
 See [grading](docs/grading.md) for failure modes and weights and [methodology](docs/methodology.md) for axes, equations, and assumptions.
 
 ## Data and reproducibility
 
-`data/tricks.json` contains the reviewed trick table and its source links. `data/tasks.jsonl` contains 36 public tasks: 12 tricks across three gravity and launch-speed variants. Rebuild them exactly:
+`data/tricks.json` contains the reviewed trick table and its source links. `data/tasks.jsonl` contains 72 public tasks: 24 tricks across three gravity and launch-speed variants, including half flips that cannot land wheels-down and launches too weak to finish the rotation. Rebuild them exactly:
 
 ```bash
 node scripts/gen-tasks.mjs --seed 20261015 --split public
 ```
 
-Generate a private candidate split with a different seed:
+Generate a private candidate split with a different seed. The hidden split requires an explicit `--seed` and refuses the public seed 20261015:
 
 ```bash
-node scripts/gen-tasks.mjs --seed 43110 --split hidden
+node scripts/gen-tasks.mjs --seed 88200416 --split hidden
 ```
 
-The hidden file is gitignored; keep it outside public reports and packages. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
+The hidden file lands in `.hidden/tasks.jsonl` (gitignored) and is excluded from the npm package. Point a run at another split with `--tasks <path>` on the CLI (including `serve` and `mcp`), `run(adapter, { tasks })` or `createBenchmark(path)` in the SDK, `?tasks=<path>` on each HTTP route, or a `tasksPath` argument on MCP tools. Remote surfaces (`?tasks=` and `tasksPath`) only accept `*.jsonl` files under `data/`, so a hidden split stays reachable only through the CLI flag and the SDK option. `data/PROVENANCE.md` records licences, retrieval date, contamination cutoff, exact commands, and refresh cadence.
 
 ## SDK
 
@@ -79,7 +81,7 @@ The hidden file is gitignored; keep it outside public reports and packages. `dat
 import { benchmark, run, score } from "benchmark-skateboard";
 ```
 
-`run(adapter, options)` returns a standard `RunReport`. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
+`run(adapter, options)` returns a standard `RunReport` plus the skateboard field `breakdown`; `options.tasks` points it at a split file. `createBenchmark(path)` binds a new instance to one tasks file — there is no process-global tasks path. `score(taskId, submission)` applies the same deterministic grader used by every other surface.
 
 ## CLI
 
@@ -93,7 +95,7 @@ Start the stdio server:
 npx benchmark-skateboard mcp
 ```
 
-It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
+It exposes `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`. `run_benchmark` accepts `provider` (`openrouter`, `openai`, or `mock`) and returns the report with the rotations/physics/landing breakdown. Every task-reading tool accepts an optional `tasksPath` naming a `*.jsonl` split file under `data/`.
 
 ## HTTP API
 
@@ -108,6 +110,8 @@ Import `handler` from `benchmark-skateboard/api`, or start a local server with `
 | `GET` | `/v1/provenance` |
 | `GET` | `/v1/index-entry` |
 
+Add `?tasks=<path>` to any route to read a public split file under `data/` instead of the default tasks.
+
 Put authentication and rate limits in front of a public score endpoint.
 
 ## Limits and known weaknesses
@@ -116,7 +120,7 @@ Put authentication and rate limits in front of a public score endpoint.
 - Minimum trick times are declared benchmark assumptions, not measured athlete limits.
 - Trick axes compress motions such as an impossible into one idealized rotation.
 - Public prompts can enter training data. Use a fresh private seed for final comparisons.
-- A 36-task sample has wide confidence intervals and should not support small ranking claims.
+- A 72-task sample has wide confidence intervals and should not support small ranking claims.
 - The grader checks the stated model, not whether a generated animation looks convincing.
 
 ## Prior art and sources
@@ -132,7 +136,7 @@ npm run ci:local
 
 The gate builds the package, rejects trivial answers, runs the mock over every task, calls every CLI and HTTP route, opens the MCP server with the official client, and writes `artifacts/e2e-report.json`.
 
-Version 0.1.0 is alpha. Schemas and task assumptions may change before 1.0. Report defects in [GitHub Issues](https://github.com/pooriaarab/benchmark-skateboard/issues).
+Version 0.2.0 is alpha. Schemas and task assumptions may change before 1.0. Report defects in [GitHub Issues](https://github.com/pooriaarab/benchmark-skateboard/issues).
 
 ## License
 
