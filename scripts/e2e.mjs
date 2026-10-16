@@ -27,6 +27,8 @@ assert.equal(shown.task.id, firstTask.id);
 const runResult = await cli("run", "--provider", "mock", "--json");
 const report = JSON.parse(runResult.stdout);
 assert.equal(report.rows.length, 36);
+assert.ok(report.breakdown);
+assert.ok(typeof report.breakdown.rotations === "number");
 assert.ok(report.mean > 0 && report.mean < 1);
 assert.ok(report.rows.some((row) => row.score === 1));
 assert.ok(report.rows.some((row) => row.score === 0));
@@ -34,6 +36,7 @@ await mkdir("artifacts", { recursive: true });
 await writeFile("artifacts/mock-report.json", `${JSON.stringify(report, null, 2)}\n`);
 const rescored = JSON.parse((await cli("score", "artifacts/mock-report.json", "--json")).stdout);
 assert.equal(rescored.rows.length, 36);
+assert.ok(rescored.breakdown);
 await cli("card", "artifacts/mock-report.json", "artifacts/share-card.svg", "--json");
 assert.match(await readFile("artifacts/share-card.svg", "utf8"), /<svg/);
 assert.match((await cli("provenance")).stdout, /Human-written skateboard trick glossary/);
@@ -116,6 +119,10 @@ const publicOnHiddenMean =
 assert.ok(publicOnHiddenMean < 1);
 assert.ok(publicOnHiddenMean <= 0.85);
 
+const altListed = JSON.parse((await cli("list", "--tasks", hiddenPath, "--json")).stdout);
+assert.equal(altListed.tasks.length, 36);
+assert.ok(altListed.tasks.every((task) => task.id.startsWith("hidden-")));
+
 const probe = createNetServer();
 await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
 const address = probe.address();
@@ -153,6 +160,8 @@ try {
   assert.equal((await score.json()).score, 1);
   assert.equal((await get("/v1/provenance")).response.status, 200);
   assert.equal((await get("/v1/index-entry")).value.task_count, 36);
+  const altTasks = await get(`/v1/tasks?tasks=${encodeURIComponent(hiddenPath)}`);
+  assert.equal(altTasks.value.tasks.length, 36);
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
