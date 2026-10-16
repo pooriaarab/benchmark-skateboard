@@ -13,6 +13,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const hasOnly = (value: Record<string, unknown>, keys: string[]) =>
   Object.keys(value).length === keys.length && keys.every((key) => key in value);
 
+const MAX_FALLBACK_STARTS = 64;
+
 function balancedObjects(text: string): string[] {
   const found: string[] = [];
   let depth = 0;
@@ -43,8 +45,12 @@ function balancedObjects(text: string): string[] {
   if (found.length > 0) return found;
   // A stray unmatched "{" earlier in the text can swallow a real object; retry per brace.
   const spans: Array<[number, number]> = [];
+  const starts: number[] = [];
   for (let index = 0; index < text.length; index += 1) {
-    if (text[index] !== "{") continue;
+    if (text[index] === "{") starts.push(index);
+  }
+  // Cap the rescans so a run of unmatched braces costs O(MAX_FALLBACK_STARTS * n), not O(n^2).
+  for (const index of starts.slice(-MAX_FALLBACK_STARTS)) {
     let inner = 0;
     let innerString = false;
     let innerEscaped = false;
