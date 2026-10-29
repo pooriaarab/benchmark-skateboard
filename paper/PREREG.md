@@ -35,3 +35,8 @@ Anticipated failures: answer-key leakage, wrong sign convention, rounded thresho
 Zero paid calls; no external inference. Free hosted inference is not configured for this packet and its availability is not probed.
 No humans, training, provider comparison, or deployment claims. Public templates may be memorized; numeric recombination is not a semantic holdout.
 Publish code and generated traces in the PR. Do not publish to a venue, Zenodo, or arXiv. The parent handles publication.
+
+## Implementation correction before final analysis
+2026-10-29: Initial summary code resampled worlds within each trick. Inspection caught the mismatch with the planned cluster bootstrap.
+Correct the summary to resample whole tricks. Regenerate all data. Outcomes and the fixed protocol remain unchanged.
+The initial sensitivity run also showed the absolute rounding floor can preserve height credit outside the relative band. Retain this H2 exception.
