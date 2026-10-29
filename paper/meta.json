@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "title": "Benchmark Skateboard: Signed Rotations and Flight-Time Constraints",
+  "abstract": "Benchmark Skateboard tests consistency between signed rotations, projectile arithmetic, and landing constraints under an explicit simplified model. Its 72 public tasks cross 24 trick definitions with three gravity settings. We evaluate scripted controls through the benchmark runner and conduct a simulated population experiment with numeric and rotation corruption. A glossary-assisted analytic control reaches full credit on every task. Reversing rotation signs retains a mean score of 0.780, showing why partial credit must accompany complete-answer accuracy. Numeric perturbations reveal a sharp tolerance boundary with an absolute rounding-floor exception. Simulated repair layers separate arithmetic recovery from consistency with corrupted rotations. All results are generated locally without paid inference. These findings characterize the measurement instrument; they do not establish learned-model skill or real-world skateboarding ability.",
+  "authors": [
+    {
+      "name": "Pooria Arab",
+      "affiliation": "Independent researcher",
+      "orcid": "https://orcid.org/0009-0005-9964-6841"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "physical reasoning",
+    "skateboard",
+    "benchmark",
+    "simulation",
+    "measurement validity"
+  ],
+  "code_url": "https://github.com/pooriaarab/benchmark-skateboard",
+  "artifact_name": "skateboard-paper.pdf"
+}

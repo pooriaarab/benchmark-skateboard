@@ -1,0 +1,24 @@
+\newcommand{\PaperTitle}{Benchmark Skateboard: Signed Rotations and Flight-Time Constraints}
+\newcommand{\PaperAbstract}{Benchmark Skateboard tests consistency between signed rotations, projectile arithmetic, and landing constraints under an explicit simplified model. Its 72 public tasks cross 24 trick definitions with three gravity settings. We evaluate scripted controls through the benchmark runner and conduct a simulated population experiment with numeric and rotation corruption. A glossary-assisted analytic control reaches full credit on every task. Reversing rotation signs retains a mean score of 0.780, showing why partial credit must accompany complete-answer accuracy. Numeric perturbations reveal a sharp tolerance boundary with an absolute rounding-floor exception. Simulated repair layers separate arithmetic recovery from consistency with corrupted rotations. All results are generated locally without paid inference. These findings characterize the measurement instrument; they do not establish learned-model skill or real-world skateboarding ability.}
+\newcommand{\TaskCount}{72}
+\newcommand{\TrickCount}{24}
+\newcommand{\SimAgentCount}{20}
+\newcommand{\SimMultiplier}{1.1}
+\newcommand{\BootstrapDraws}{2000}
+\newcommand{\ConditionCount}{313}
+\newcommand{\ObservationCount}{22536}
+\newcommand{\AuthorOrcid}{0009-0005-9964-6841}
+\newcommand{\OracleMean}{1.000 [1.000, 1.000]}
+\newcommand{\OracleFull}{1.000 [0.949, 1.000]}
+\newcommand{\ConstantMean}{0.020 [0.000, 0.050]}
+\newcommand{\ConstantFull}{0.000 [0.000, 0.051]}
+\newcommand{\AlwaysMean}{0.805 [0.760, 0.847]}
+\newcommand{\AlwaysFull}{0.250 [0.164, 0.361]}
+\newcommand{\ReverseMean}{0.780 [0.760, 0.810]}
+\newcommand{\ReverseFull}{0.083 [0.039, 0.170]}
+\newcommand{\Simnone}{0.401 [0.384, 0.416]}
+\newcommand{\Simphysics}{0.880 [0.873, 0.887]}
+\newcommand{\Gainphysics}{0.480 [0.463, 0.498]}
+\newcommand{\Simboolean}{0.379 [0.364, 0.393]}
+\newcommand{\Gainboolean}{-0.021 [-0.025, -0.018]}
+\newcommand{\SensitivityOutside}{0.243 [0.240, 0.248]}

@@ -17,3 +17,13 @@ keywords:
   - llm-evaluation
   - agent-evaluation
   - deterministic-grader
+
+preferred-citation:
+  type: report
+  title: "Benchmark Skateboard: Signed Rotations and Flight-Time Constraints"
+  authors:
+    - family-names: Arab
+      given-names: Pooria
+      orcid: "https://orcid.org/0009-0005-9964-6841"
+  year: 2026
+  url: "https://github.com/pooriaarab/benchmark-skateboard/tree/bska-29-benchmark-paper/paper"

@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "pages": 9,
+  "conditions": 313,
+  "observations": 22536,
+  "repeatMatch": true,
+  "rawScoresRechecked": 22536,
+  "roundingFloorExceptions": [
+    {
+      "taskId": "public-kickflip-earth-20261015",
+      "score": 0.42,
+      "answer": {
+        "rotations": {
+          "long": 1,
+          "vertical": 0,
+          "cross": 0
+        },
+        "airtimeS": 0.07347604485219164,
+        "peakHeightM": 0.006245463812436291,
+        "landsWheelsDown": true,
+        "canFlipFinishInAir": false
+      },
+      "referenceHeight": 0.005891946992864425
+    }
+  ],
+  "template": "Unchanged accepted pilot template; compared separately with diff -r"
+}

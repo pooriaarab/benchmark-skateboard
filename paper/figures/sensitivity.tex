@@ -1,0 +1,6 @@
+\begin{figure}[ht]\centering
+\begin{tikzpicture}\begin{axis}[ymin=0,ymax=1.1,xlabel={Multiplier on both exact physics values},ylabel={Mean score}]
+\addplot+[color=okorange,mark=*,error bars/.cd,y dir=both,y explicit] table[x=x,y=y,y error minus=minus,y error plus=plus,col sep=comma]{figures/sensitivity.generated.csv};
+\end{axis}\end{tikzpicture}
+\caption{Physics tolerance creates a sharp score boundary. Bars show 95\% trick-cluster bootstrap intervals. The absolute rounding floor preserves a small amount of height credit outside the relative band.}\label{fig:sensitivity}
+\end{figure}
