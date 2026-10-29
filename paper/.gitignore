@@ -1,0 +1,9 @@
+*.pdf
+*.log
+*.aux
+*.bbl
+*.blg
+*.out
+.style.zip
+neurips_2026.sty
+__pycache__/

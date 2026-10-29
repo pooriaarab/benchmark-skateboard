@@ -1,0 +1,14 @@
+{
+  "title": "Benchmark Skateboard: Signed Rotations and Flight-Time Constraints",
+  "orcid": "https://orcid.org/0009-0005-9964-6841",
+  "keywords": [
+    "physical reasoning",
+    "skateboard",
+    "benchmark",
+    "simulation",
+    "measurement validity"
+  ],
+  "code_url": "https://github.com/pooriaarab/benchmark-skateboard",
+  "artifact_name": "skateboard-paper.pdf",
+  "source_commit": "856161e4040f3e37a31105ec085094537974cf5a"
+}
