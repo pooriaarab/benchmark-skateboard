@@ -1,5 +1,7 @@
 # benchmark-skateboard
 
+Paper: [10.5281/zenodo.23752429](https://doi.org/10.5281/zenodo.23752429)
+
 [![npm](https://img.shields.io/npm/v/benchmark-skateboard)](https://www.npmjs.com/package/benchmark-skateboard) [![CI](https://github.com/pooriaarab/benchmark-skateboard/actions/workflows/ci.yml/badge.svg)](https://github.com/pooriaarab/benchmark-skateboard/actions/workflows/ci.yml) [![license](https://img.shields.io/npm/l/benchmark-skateboard)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
 
 [AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-skateboard) · [npm](https://www.npmjs.com/package/benchmark-skateboard) · [HTTP API](#http-api) · [MCP](#model-context-protocol)
